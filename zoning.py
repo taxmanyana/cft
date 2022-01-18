@@ -279,6 +279,7 @@ if __name__ == "__main__":
         import json
         with open(settingsfile, 'w') as fp:
             json.dump(config, fp, indent=4)
+            
 
     def launch_zoning_Thread():
         t = threading.Thread(target=exec_zoning)
@@ -387,7 +388,7 @@ if __name__ == "__main__":
         fa.fit(X)
         
         print('explained variance')
-        window.statusbar.showMessage('explained variance')
+        window.statusbar.showMessage('computing explained variance')
         explained_variance = fa.explained_variance_.T
         
         total_exp_var = explained_variance.sum()
@@ -424,14 +425,21 @@ if __name__ == "__main__":
         # open base map to get bounds
         with open(base_vector, "r") as read_file:
             base_map = geojson.load(read_file)
-        feature = base_map['features'][0]
-        poly = feature['geometry']
-        polygon = shape(feature['geometry'])
-        minx, miny, maxx, maxy = polygon.bounds
-        minx = int(minx-1) * 1.0
-        maxx = round(maxx+0.5,0)
-        miny = int(miny-1) * 1.0
-        maxy = round(maxy+0.5,0)
+        
+        mx, xx, my, yy = [], [], [], []
+        for feature in base_map['features']:
+            poly = feature['geometry']
+            polygon = shape(feature['geometry'])
+            minx, miny, maxx, maxy = polygon.bounds
+            mx.append(minx)
+            xx.append(maxx)
+            my.append(miny)
+            yy.append(maxy)
+            
+        minx = int(np.min(mx)-1) * 1.0
+        maxx = round(np.max(mx)+0.5,0)
+        miny = int(np.min(my)-1) * 1.0
+        maxy = round(np.max(yy)+0.5,0)
         
         # target grid to interpolate to
         if minx > int(min(lons)-1) * 1.0: minx = int(min(lons)-1) * 1.0
@@ -470,8 +478,10 @@ if __name__ == "__main__":
             comps.append(list(zi))
             # plot
             axs[i].imshow(zi, extent=(minx, maxx, maxy, miny))
+            for feature in base_map['features']:
+                poly = feature['geometry']
+                axs[i].add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
             axs[i].plot(x,y,'k.')
-            axs[i].add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
             axs[i].title.set_text(col)
             axs[i].title.set_fontsize(10)
             axs[i].invert_yaxis()
@@ -480,8 +490,6 @@ if __name__ == "__main__":
         plt.savefig(farpng,dpi=100)
         plt.close(fig)
         
-        
-        
         comps = np.array(comps)    
         #comps[np.isnan(comps)] = 0
         comps = comps.reshape(len(colnames),len(xs)*len(ys))
@@ -489,7 +497,7 @@ if __name__ == "__main__":
         if nzones is None:
             # compute optimal number of zones
             print('compute optimal number of zones')
-            window.statusbar.showMessage('compute optimal number of zones')
+            window.statusbar.showMessage('computing optimal number of zones')
             wcss = []
             distances = []
             maxk = 16
@@ -514,7 +522,7 @@ if __name__ == "__main__":
             n_clusters = nzones
         
         print('clustering of components')
-        window.statusbar.showMessage('clustering of components')
+        window.statusbar.showMessage('clustering components')
         db = cluster.KMeans(n_clusters = n_clusters, random_state=42).fit(comps.T)
         zi = db.labels_.reshape(len(ys), len(xs))
         print("number of zones ", len(np.unique(db.labels_)))
@@ -526,8 +534,10 @@ if __name__ == "__main__":
         fig = plt.figure(figsize=(W / float(DPI), H / float(DPI)), frameon=True, dpi=DPI)
         ax = fig.gca()
         ax.imshow(zi, extent=(minx, maxx, maxy, miny))
+        for feature in base_map['features']:
+            poly = feature['geometry']
+            ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
         ax.plot(x,y,'k.')
-        ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
         ax.title.set_text('zones')
         ax.title.set_fontsize(10)
         ax.invert_yaxis()
@@ -607,7 +617,7 @@ if __name__ == "__main__":
         smallerpolygons = np.unique(smallerpolygons)
         smallerpolygons = list(set(smallerpolygons).intersection(containedpolygons))
         print('will clean out tiny polygons ', smallerpolygons)
-        window.statusbar.showMessage('will clean out tiny polygons ' + str(smallerpolygons))
+        window.statusbar.showMessage('removing tiny polygons ' + str(smallerpolygons))
         
         zones = []
         coords = []
@@ -650,36 +660,36 @@ if __name__ == "__main__":
         
         # open intermediate zone layer for clipping
         print('open intermediate zone layer for clipping')
-        window.statusbar.showMessage('open intermediate zone layer for clipping')
+        window.statusbar.showMessage('opening intermediate zone layer for clipping')
         inDataSource = drv2.Open(zonejson_clean)
         inLayer = inDataSource.GetLayer()
         
         # open base map for clipping
         print('open base map for clipping')
-        window.statusbar.showMessage('open base map for clipping')
+        window.statusbar.showMessage('opening base map for clipping')
         inClipSource = drv2.Open(base_vector)
         inClipLayer = inClipSource.GetLayer()
         
         # create output ector file for the final zones
         print('create output ector file for the final zones')
-        window.statusbar.showMessage('create output ector file for the final zones')
+        window.statusbar.showMessage('creating output ector file for the final zones')
         outDataSource = drv2.CreateDataSource(zonejson)
         outLayer = outDataSource.CreateLayer('Zones', srs = None )
         
         # perform smoothing if activated
         if config.get('smoothing', 0):
             # smooth the output vector
-            print('smooth the output vector')
+            print('smoothing the output vector')
             smooth_size = gridsize * 2.0
             smooth(zonejson_clean,zonejson_smooth,dst_layername,smooth_size)
             # open base map for clipping
-            print('open smoothed map for clipping')
+            print('opening smoothed map for clipping')
             inDataSource = drv2.Open(zonejson_smooth)
             inLayer = inDataSource.GetLayer()
         
         # clip intermediate zone layer with base map
         print('clip intermediate zone layer with base map')
-        window.statusbar.showMessage('clip intermediate zone layer with base map')
+        window.statusbar.showMessage('clipping intermediate zone layer with base map')
         ogr.Layer.Clip(inLayer, inClipLayer, outLayer)
         
         # close data sources

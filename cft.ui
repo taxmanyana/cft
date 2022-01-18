@@ -518,7 +518,7 @@
      </size>
     </property>
     <property name="title">
-     <string>Predictant</string>
+     <string>Predictand</string>
     </property>
     <layout class="QGridLayout" name="gridLayout_6">
      <item row="0" column="0">
@@ -698,11 +698,11 @@
      </size>
     </property>
     <property name="title">
-     <string>Predictant Input</string>
+     <string>Predictand Input</string>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="0" colspan="3">
-      <widget class="QListWidget" name="predictantlistWidget">
+      <widget class="QListWidget" name="predictandlistWidget">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -733,7 +733,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QPushButton" name="browsepredictantButton">
+      <widget class="QPushButton" name="browsepredictandButton">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -752,7 +752,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QPushButton" name="clearpredictantButton">
+      <widget class="QPushButton" name="clearpredictandButton">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -771,7 +771,7 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QComboBox" name="predictantIDcombobox">
+      <widget class="QComboBox" name="predictandIDcombobox">
        <property name="minimumSize">
         <size>
          <width>90</width>

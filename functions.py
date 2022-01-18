@@ -847,14 +847,14 @@ def nc_unit_split(config, predictordict, fcstPeriod, comb):
     algorithm = config.get('algorithms')[al]
     predictor = predictordict[list(predictordict.keys())[pr]]
     predictor['Name'] = list(predictordict.keys())[pr]
-    predictant_data = netcdf_data(config.get('predictantList')[0], param=config.get('predictantattr'))
-    return forecast_pixel_unit(config, predictor, predictant_data, fcstPeriod, algorithm, point)
+    predictand_data = netcdf_data(config.get('predictandList')[0], param=config.get('predictandattr'))
+    return forecast_pixel_unit(config, predictor, predictand_data, fcstPeriod, algorithm, point)
 
-def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algorithm, point):
+def forecast_pixel_unit(config, predictordict, predictand_data, fcstPeriod, algorithm, point):
     x, y = point
     predictorName = predictordict.get('Name')
-    input_data = predictant_data.tslice(x=x, y=y)
-    times = predictant_data.times()
+    input_data = predictand_data.tslice(x=x, y=y)
+    times = predictand_data.times()
     trainStartYear = int(config['trainStartYear'])
     trainEndYear = int(config['trainEndYear'])
     fcstYear = int(config['fcstyear'])
@@ -893,17 +893,17 @@ def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algo
 
     sst_arr = predictordict['data']
 
-    predictant = np.asarray(point_season, dtype=float).reshape(-1, )
-    training_actual = predictant[:len(trainingYears)]
-    test_actual = predictant[len(trainingYears):]
+    predictand = np.asarray(point_season, dtype=float).reshape(-1, )
+    training_actual = predictand[:len(trainingYears)]
+    test_actual = predictand[len(trainingYears):]
     test_notnull = np.isfinite(test_actual)
     if (len(training_actual[np.isfinite(training_actual)]) < 6) or (len(test_actual[np.isfinite(test_actual)]) < 2):
         return None
 
     # compute basins
-    trainPredictant = predictant[:nyears]
+    trainPredictand = predictand[:nyears]
     trainSST = sst_arr[:nyears]
-    pnotnull = np.isfinite(trainPredictant)
+    pnotnull = np.isfinite(trainPredictand)
     try:
         nyearssst, nrowssst, ncolssst = sst_arr.shape
     except ValueError:
@@ -922,7 +922,7 @@ def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algo
                 warnings.filterwarnings('error')
                 try:
                     notnull = pnotnull & np.isfinite(sstvals)
-                    r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictant[notnull], sstvals[notnull])
+                    r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictand[notnull], sstvals[notnull])
                 except:
                     pass
         # corr = (p_matrix <= config['PValue']) & (abs(r_matrix) >= 0.5)
@@ -968,7 +968,7 @@ def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algo
         basin_arr.insert(0, 'year')
         corr_df = pd.DataFrame(columns=basin_arr)
         corr_df['year'] = trainingYears
-        corr_df[fcstPeriod] = trainPredictant
+        corr_df[fcstPeriod] = trainPredictand
         corr_df.set_index('year', inplace=True)
         for yr in range(nyearssst):
             year = yearssst[yr]
@@ -987,10 +987,10 @@ def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algo
     
         # get basin combination with highest r-square: returns bestr2score, final_basins, final_basin_matrix
         basin_matrix_df = pd.DataFrame(basin_matrix[:len(trainingYears)], columns=basin_arr)
-        notnull = np.isfinite(np.array(predictant[:len(trainingYears)]))
+        notnull = np.isfinite(np.array(predictand[:len(trainingYears)]))
         try:
             final_basins, comments = stepwise_selection(basin_matrix_df[notnull].astype(float),
-                                                    list(predictant[:len(trainingYears)][notnull]),
+                                                    list(predictand[:len(trainingYears)][notnull]),
                                                     initial_list=basin_arr, threshold_out=config.get('stepwisePvalue'))
         except:
             final_basins = basin_arr[:]
@@ -1112,15 +1112,15 @@ def forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algo
         return None
 
 
-def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, station, outdir):
+def forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, station, outdir):
     predictorName = predictordict.get('Name')
     output = {}
     stationYF_dfs = []
     output[station] = {}
-    input_data = predictantdict['data']
-    indx = predictantdict['stations'].index(station)
-    lat = predictantdict['lats'][indx]
-    lon = predictantdict['lons'][indx]
+    input_data = predictanddict['data']
+    indx = predictanddict['stations'].index(station)
+    lat = predictanddict['lats'][indx]
+    lon = predictanddict['lons'][indx]
     station_data_all =  input_data.loc[input_data['ID'] == station]
     trainStartYear = int(config['trainStartYear'])
     trainEndYear = int(config['trainEndYear'])
@@ -1139,16 +1139,16 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
         nyearssst, nrowssst, ncolssst = sst_arr.shape
     except ValueError:
         nyearssst, nrowssst, ncolssst = len(sst_arr), 0, 0
-    yearspredictant = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
+    yearspredictand = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
     station_data = station_data_all.loc[:,
                    ('Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')]
     station_data.drop_duplicates('Year', inplace=True)
     station_data = station_data.apply(pd.to_numeric, errors='coerce')
     seasonal_precip = pd.DataFrame(columns=['Year',fcstPeriod])
-    seasonal_precip['Year'] = yearspredictant
+    seasonal_precip['Year'] = yearspredictand
     seasonal_precip.set_index('Year', inplace=True)
     station_data.set_index('Year', inplace=True)
-    for year in yearspredictant:
+    for year in yearspredictand:
         if config.get('fcstPeriodLength', '3month') == '3month':
             if config['composition'] == "Sum":
                 seasonal_precip.loc[[year], fcstPeriod] = season_cumulation(station_data, year, fcstPeriod)
@@ -1160,9 +1160,9 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
             except KeyError:
                 seasonal_precip.loc[[year], fcstPeriod] = np.nan
 
-    predictant = np.asarray(seasonal_precip, dtype=float).reshape(-1, )
-    training_actual = predictant[:len(trainingYears)]
-    test_actual = predictant[len(trainingYears):]
+    predictand = np.asarray(seasonal_precip, dtype=float).reshape(-1, )
+    training_actual = predictand[:len(trainingYears)]
+    test_actual = predictand[len(trainingYears):]
     test_notnull = np.isfinite(test_actual)
     name = re.sub('[^a-zA-Z0-9]', '', prefixParam["station"])
     prefix = prefixParam["Predictor"] + '_' + prefixParam["Param"] + '_' + config.get('predictorMonth') + '_' + \
@@ -1171,9 +1171,9 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
         return None
 
     # compute basins
-    trainPredictant = predictant[:nyears]
+    trainPredictand = predictand[:nyears]
     trainSST = sst_arr[:nyears]
-    pnotnull = np.isfinite(trainPredictant)
+    pnotnull = np.isfinite(trainPredictand)
     yearssst = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
     if (nrowssst, ncolssst) != (0, 0):
         SSTclusterSize = 1000.
@@ -1189,7 +1189,7 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
                 warnings.filterwarnings('error')
                 try:
                     notnull = pnotnull & np.isfinite(sstvals)
-                    r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictant[notnull], sstvals[notnull])
+                    r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictand[notnull], sstvals[notnull])
                 except:
                     pass
         # corr = (p_matrix <= config['PValue']) & (abs(r_matrix) >= 0.5)
@@ -1234,7 +1234,7 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
         basin_arr.insert(0, 'year')
         corr_df = pd.DataFrame(columns=basin_arr)
         corr_df['year'] = trainingYears
-        corr_df[fcstPeriod] = trainPredictant
+        corr_df[fcstPeriod] = trainPredictand
         corr_df.set_index('year', inplace=True)
         for yr in range(nyearssst):
             year = yearssst[yr]
@@ -1257,10 +1257,10 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
     
         # get basin combination with highest r-square: returns bestr2score, final_basins, final_basin_matrix
         basin_matrix_df = pd.DataFrame(basin_matrix[:len(trainingYears)], columns=basin_arr)
-        notnull = np.isfinite(np.array(predictant[:len(trainingYears)]))
+        notnull = np.isfinite(np.array(predictand[:len(trainingYears)]))
         try:
             final_basins, comments = stepwise_selection(basin_matrix_df[notnull].astype(float),
-                                                    list(predictant[:len(trainingYears)][notnull]),
+                                                    list(predictand[:len(trainingYears)][notnull]),
                                                     initial_list=basin_arr, threshold_out=config.get('stepwisePvalue'))
         except:
             final_basins = basin_arr[:]
@@ -1475,14 +1475,14 @@ def forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, 
     else:
         return None
 
-def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, station):
+def forecast_station(config, predictordict, predictanddict, fcstPeriod, outdir, station):
     output = {}
     stationYF_dfs = []
     output[station] = {}
-    input_data = predictantdict['data']
-    indx = predictantdict['stations'].index(station)
-    lat = predictantdict['lats'][indx]
-    lon = predictantdict['lons'][indx]
+    input_data = predictanddict['data']
+    indx = predictanddict['stations'].index(station)
+    lat = predictanddict['lats'][indx]
+    lon = predictanddict['lons'][indx]
     station_data_all =  input_data.loc[input_data['ID'] == station]
     trainStartYear = int(config['trainStartYear'])
     trainEndYear = int(config['trainEndYear'])
@@ -1505,16 +1505,16 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
         except ValueError:
             nyearssst, nrowssst, ncolssst = len(sst_arr), 0, 0
             
-        yearspredictant = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
+        yearspredictand = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
         station_data = station_data_all.loc[:,
                        ('Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')]
         station_data.drop_duplicates('Year', inplace=True)
         station_data = station_data.apply(pd.to_numeric, errors='coerce')
         seasonal_precip = pd.DataFrame(columns=['Year',fcstPeriod])
-        seasonal_precip['Year'] = yearspredictant
+        seasonal_precip['Year'] = yearspredictand
         seasonal_precip.set_index('Year', inplace=True)
         station_data.set_index('Year', inplace=True)
-        for year in yearspredictant:
+        for year in yearspredictand:
             if config.get('fcstPeriodLength', '3month') == '3month':
                 if config['composition'] == "Sum":
                     seasonal_precip.loc[[year], fcstPeriod] = season_cumulation(station_data, year, fcstPeriod)
@@ -1526,9 +1526,9 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
                 except KeyError:
                     seasonal_precip.loc[[year], fcstPeriod] = np.nan
 
-        predictant = np.asarray(seasonal_precip, dtype=float).reshape(-1, )
-        training_actual = predictant[:len(trainingYears)]
-        test_actual = predictant[len(trainingYears):]
+        predictand = np.asarray(seasonal_precip, dtype=float).reshape(-1, )
+        training_actual = predictand[:len(trainingYears)]
+        test_actual = predictand[len(trainingYears):]
         test_notnull = np.isfinite(test_actual)
         name = re.sub('[^a-zA-Z0-9]', '', prefixParam["station"])
         prefix = prefixParam["Predictor"] + '_' + prefixParam["Param"] + '_' + prefixParam["PredictorMonth"] + '_' + \
@@ -1537,9 +1537,9 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
             continue
 
         # compute basins
-        trainPredictant = predictant[:nyears]
+        trainPredictand = predictand[:nyears]
         trainSST = sst_arr[:nyears]
-        pnotnull = np.isfinite(trainPredictant)
+        pnotnull = np.isfinite(trainPredictand)
         yearssst = [yr for yr in range(trainStartYear, (trainStartYear + nyearssst))]
         if (nrowssst, ncolssst) != (0, 0): 
             SSTclusterSize = 1000.
@@ -1553,7 +1553,7 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
                     warnings.filterwarnings('error')
                     try:
                         notnull = pnotnull & np.isfinite(sstvals)
-                        r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictant[notnull], sstvals[notnull])
+                        r_matrix[row][col], p_matrix[row][col] = pearsonr(trainPredictand[notnull], sstvals[notnull])
                     except:
                         pass
             # corr = (p_matrix <= config['PValue']) & (abs(r_matrix) >= 0.5)
@@ -1598,7 +1598,7 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
             basin_arr.insert(0, 'year')
             corr_df = pd.DataFrame(columns=basin_arr)
             corr_df['year'] = trainingYears
-            corr_df[fcstPeriod] = trainPredictant
+            corr_df[fcstPeriod] = trainPredictand
             corr_df.set_index('year', inplace=True)
             for yr in range(nyearssst):
                 year = yearssst[yr]
@@ -1621,10 +1621,10 @@ def forecast_station(config, predictordict, predictantdict, fcstPeriod, outdir, 
     
             # get basin combination with highest r-square: returns bestr2score, final_basins, final_basin_matrix
             basin_matrix_df = pd.DataFrame(basin_matrix[:len(trainingYears)], columns=basin_arr)
-            notnull = np.isfinite(np.array(predictant[:len(trainingYears)]))
+            notnull = np.isfinite(np.array(predictand[:len(trainingYears)]))
             try:
                 final_basins, comments = stepwise_selection(basin_matrix_df[notnull].astype(float),
-                                                        list(predictant[:len(trainingYears)][notnull]),
+                                                        list(predictand[:len(trainingYears)][notnull]),
                                                         initial_list=basin_arr, threshold_out=config.get('stepwisePvalue'))
             except:
                 final_basins = basin_arr[:]

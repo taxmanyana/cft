@@ -56,8 +56,8 @@ FEATURES
 - Option to forecast a 3-month season, or a single month
 - Adjustable model training period
 - Supports multiple predictors (in NetCDF format). Tool will loop and generate forecast for each predictor
-- Support for gridded ground data (NetCDF) as the predictant
-- Supports point (station) as the predictant
+- Support for gridded ground data (NetCDF) as the predictand
+- Supports point (station) as the predictand
 - Supports season cumulation (rainfall) or season average (temperature) functions
 - Supports Linear Regression and Artificial Intelligence (Multilayer Perceptron regression)
 - For station (point) data, a forecast can be summarized per zone, where a weighted average forecast is produced from the stations within the zone

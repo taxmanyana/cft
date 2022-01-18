@@ -24,9 +24,9 @@ csvheader = 'Year,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'
 fcstyear = QDate.currentDate().year()
 settingsfile = 'settings.json'
 predictordict = {}
-predictantdict = {}
-predictantdict['stations'] = []
-predictantdict['data'] = None
+predictanddict = {}
+predictanddict['stations'] = []
+predictanddict['data'] = None
 fcstPeriod = None
 cpus = int(round(0.9 * cpu_count() - 0.5, 0))
 if cpus == 0: cpus = 1
@@ -75,9 +75,9 @@ if __name__ == "__main__":
         config['Version'] = version
         config['outDir'] = ''
         config['predictorList'] = []
-        config['predictantList'] = []
-        config['predictantMissingValue'] = -9999
-        config['predictantattr'] = 'pre'
+        config['predictandList'] = []
+        config['predictandMissingValue'] = -9999
+        config['predictandattr'] = 'pre'
         config['fcstPeriodStartMonth'] = 'Oct'
         config['fcstPeriodLength'] = '3month'
         config['trainStartYear'] = 1971
@@ -126,12 +126,12 @@ if __name__ == "__main__":
         for yy in newList:
             window.predictorlistWidget.addItem(os.path.basename(yy))
 
-    def addPredictants():
+    def addPredictands():
         global config
         global csvheader
-        config['predictantList'] = []
-        window.predictantlistWidget.clear()
-        window.predictantIDcombobox.clear()
+        config['predictandList'] = []
+        window.predictandlistWidget.clear()
+        window.predictandIDcombobox.clear()
         window.statusbar.showMessage("")
         if window.CSVRadio.isChecked() == True:
             config['inputFormat'] = "CSV"
@@ -148,29 +148,29 @@ if __name__ == "__main__":
                     window.statusbar.showMessage(
                         "Format error, one or more column headers incorrect in " + os.path.basename(filename))
                     continue
-                config['predictantList'].append(filename)
-                window.predictantlistWidget.addItem(os.path.basename(filename))
+                config['predictandList'].append(filename)
+                window.predictandlistWidget.addItem(os.path.basename(filename))
         elif window.NetCDFRadio.isChecked() == True:
             config['inputFormat'] = "NetCDF"
             try:
                 fileName = QtWidgets.QFileDialog.getOpenFileNames(window,
                     'Add File', '..' + os.sep, filter="NetCDF File (*.nc*)")[0]
-                predictant = Dataset(fileName[0])
-                for key in predictant.variables.keys():
+                predictand = Dataset(fileName[0])
+                for key in predictand.variables.keys():
                     if key not in ['Y', 'X', 'Z', 'T', 'zlev', 'time', 'lon', 'lat']:
-                        window.predictantIDcombobox.addItem(key)
-                config['predictantList'].append(fileName[0])
-                window.predictantlistWidget.addItem(os.path.basename(fileName[0]))
+                        window.predictandIDcombobox.addItem(key)
+                config['predictandList'].append(fileName[0])
+                window.predictandlistWidget.addItem(os.path.basename(fileName[0]))
             except:
                 window.statusbar.showMessage(
-                    "Could not read predictant file, check if it is a valid NetCDF")
+                    "Could not read predictand file, check if it is a valid NetCDF")
                 return
 
-    def clearPredictants():
+    def clearPredictands():
         global config
-        config['predictantList'] = []
-        window.predictantlistWidget.clear()
-        window.predictantIDcombobox.clear()
+        config['predictandList'] = []
+        window.predictandlistWidget.clear()
+        window.predictandIDcombobox.clear()
 
     def change_period_list():
         global config
@@ -187,8 +187,8 @@ if __name__ == "__main__":
 
     def change_format_type():
         global config
-        window.predictantlistWidget.clear()
-        window.predictantIDcombobox.clear()
+        window.predictandlistWidget.clear()
+        window.predictandIDcombobox.clear()
         config['inputFormat'] = ""
 
     def populate_period_list(period, startmonth):
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         global settingsfile
         global config
         global predictordict
-        global predictantdict
+        global predictanddict
         global fcstPeriod
         global cpus
         global pwd
@@ -282,7 +282,7 @@ if __name__ == "__main__":
         config['basinbounds']['maxlon'] = float(str(window.maxlonLineEdit.text()).strip() or 360)
         config['trainStartYear'] = int(window.startyearLineEdit.text())
         config['trainEndYear'] = int(window.endyearLineEdit.text())
-        config['predictantattr'] = window.predictantIDcombobox.currentText()
+        config['predictandattr'] = window.predictandIDcombobox.currentText()
         config['minHSscore'] = int(window.minHSLineEdit.text())
 
         # check if output directory exists
@@ -299,10 +299,10 @@ if __name__ == "__main__":
         print('\nForecast:', config.get('fcstyear'), window.periodComboBox.currentText())
         print('Configuration:', os.path.basename(settingsfile))
         print('Output directory:', config.get('outDir'))
-        print('Predictant: ')
-        for predict in config.get('predictantList'):
+        print('Predictand: ')
+        for predict in config.get('predictandList'):
             print('\t -', os.path.basename(predict))
-        print('Predictant attribute:', config.get('predictantattr'))
+        print('Predictand attribute:', config.get('predictandattr'))
         print('Predictor: ')
         for predict in config.get('predictorList'):
             print('\t -', os.path.basename(predict))
@@ -317,30 +317,30 @@ if __name__ == "__main__":
         # prepare input data
         nstations = 0
         if config.get('inputFormat') == 'CSV':
-            if len(config.get('predictantList')) != 0:
-                missing = config.get('predictantMissingValue')
+            if len(config.get('predictandList')) != 0:
+                missing = config.get('predictandMissingValue')
                 if len(str(missing)) == 0: missing = -9999
-                input_data = concat_csvs(config.get('predictantList'), missing)
-                predictantdict['data'] = input_data
+                input_data = concat_csvs(config.get('predictandList'), missing)
+                predictanddict['data'] = input_data
                 stations = list(input_data['ID'].unique())
-                predictantdict['stations'] = stations
+                predictanddict['stations'] = stations
                 nstations = len(stations)
-                predictantdict['lats'], predictantdict['lons'] = [], []
+                predictanddict['lats'], predictanddict['lons'] = [], []
                 for n in range(nstations):
                     station_data_all = input_data.loc[input_data['ID'] == stations[n]]
-                    predictantdict['lats'].append(station_data_all['Lat'].unique()[0])
-                    predictantdict['lons'].append(station_data_all['Lon'].unique()[0])
+                    predictanddict['lats'].append(station_data_all['Lat'].unique()[0])
+                    predictanddict['lons'].append(station_data_all['Lon'].unique()[0])
                 processes = stations
                 print('stations:',nstations,'predictors:',len(config.get('predictorList')),'algorithms:',
                       config.get('algorithms'))
             else:
                 input_data = None
         elif config.get('inputFormat') == 'NetCDF':
-            if len(config.get('predictantList')) != 0:
-                predictant_data = netcdf_data(config.get('predictantList')[0], param=config.get('predictantattr'))
+            if len(config.get('predictandList')) != 0:
+                predictand_data = netcdf_data(config.get('predictandList')[0], param=config.get('predictandattr'))
                 prs = list(range(len(config.get('predictorList'))))
                 als = list(range(len(config.get('algorithms'))))
-                rows, cols = predictant_data.shape()
+                rows, cols = predictand_data.shape()
                 pixels = [(x, y) for x in range(rows) for y in range(cols)]
                 combs = [(st, pr, al) for st in pixels for pr in prs for al in als]
                 processes = combs
@@ -464,7 +464,7 @@ if __name__ == "__main__":
         print("\nProcessing...")
         p = Pool(cpus)
         if config.get('inputFormat') == 'CSV':
-            func = partial(forecast_station, config, predictordict, predictantdict, fcstPeriod, outdir)
+            func = partial(forecast_station, config, predictordict, predictanddict, fcstPeriod, outdir)
         elif config.get('inputFormat') == 'NetCDF':
             func = partial(nc_unit_split, config, predictordict, fcstPeriod)
 
@@ -550,8 +550,8 @@ if __name__ == "__main__":
                         forecastsdf["Zone"] = np.nan
                         # --------------
                         for n in range(nstations):
-                            station = predictantdict['stations'][n]
-                            szone = whichzone(zonejson, predictantdict['lats'][n], predictantdict['lons'][n], zoneattr)
+                            station = predictanddict['stations'][n]
+                            szone = whichzone(zonejson, predictanddict['lats'][n], predictanddict['lons'][n], zoneattr)
                             forecastsdf.loc[forecastsdf.ID == station, 'Zone'] = szone
                         fcstcsvout = forecastdir + os.sep + fcstprefix + '_zone_members.csv'
                         forecastsdf.to_csv(fcstcsvout, header=True, index=True)
@@ -609,19 +609,19 @@ if __name__ == "__main__":
                     comments = 'predictors:'
                     for predict in config.get('predictorList'):
                         comments = comments + ' ' + os.path.basename(predict).replace(' ', '_')
-                    comments = comments + ', predictant: ' + os.path.basename(
-                        config.get('predictantList')[0]).replace(' ', '_')
+                    comments = comments + ', predictand: ' + os.path.basename(
+                        config.get('predictandList')[0]).replace(' ', '_')
                     comments = comments + ', algorithms:'
                     for alg in config.get('algorithms'):
                         comments = comments + ' ' + os.path.basename(alg).replace(' ', '_')
                     # write outputs to NetCDF
-                    rows, cols = predictant_data.shape()
-                    fclass = np.zeros(shape=predictant_data.shape())
-                    HS = np.ones(shape=predictant_data.shape()) * np.nan
-                    fcst = np.ones(shape=predictant_data.shape()) * np.nan
-                    t3 = np.ones(shape=predictant_data.shape()) * np.nan
-                    t2 = np.ones(shape=predictant_data.shape()) * np.nan
-                    t1 = np.ones(shape=predictant_data.shape()) * np.nan
+                    rows, cols = predictand_data.shape()
+                    fclass = np.zeros(shape=predictand_data.shape())
+                    HS = np.ones(shape=predictand_data.shape()) * np.nan
+                    fcst = np.ones(shape=predictand_data.shape()) * np.nan
+                    t3 = np.ones(shape=predictand_data.shape()) * np.nan
+                    t2 = np.ones(shape=predictand_data.shape()) * np.nan
+                    t1 = np.ones(shape=predictand_data.shape()) * np.nan
                     for row in range(rows):
                         for col in range(cols):
                             point = (row, col)
@@ -672,8 +672,8 @@ if __name__ == "__main__":
                     initial_date.standard_name = 'time'
                     initial_date.long_name = 'forecast start date'
 
-                    latitudes[:] = predictant_data.lats
-                    longitudes[:] = predictant_data.lons
+                    latitudes[:] = predictand_data.lats
+                    longitudes[:] = predictand_data.lons
                     fcstclass[:] = fclass
                     hitscore[:] = HS
                     forecast[:] = fcst
@@ -687,7 +687,7 @@ if __name__ == "__main__":
                     output.close()
                     qmlfile = config.get('plots', {}).get('fcstqml', 'styles'+os.sep+'fcstplot_new.qml')
                     outfcstpng = fcstjsonout = forecastdir + os.sep + fcstprefix + '_forecast.png'
-                    plot_forecast_png(predictant_data.lats, predictant_data.lons, fplot, title, qmlfile, outfcstpng)
+                    plot_forecast_png(predictand_data.lats, predictand_data.lons, fplot, title, qmlfile, outfcstpng)
                     window.statusbar.showMessage('Done in '+str(convert(time.time()-start_time)))
                     print('Done in ' + str(convert(time.time() - start_time)))
                 else:
@@ -706,7 +706,7 @@ if __name__ == "__main__":
     window.pvaluelineEdit.setText(str(config.get('PValue')))
     window.minHSLineEdit.setText(str(config.get('minHSscore')))
     window.swpvaluelineEdit.setText(str(config.get('stepwisePvalue')))
-    window.missingvalueslineEdit.setText(str(config.get('predictantMissingValue')))
+    window.missingvalueslineEdit.setText(str(config.get('predictandMissingValue')))
     window.outdirlabel.setText(config.get('outDir'))
     window.fcstyearlineEdit.setText(str(config.get('fcstyear')))
     window.zonevectorlabel.setText(config.get('zonevector',{}).get('file',''))
@@ -716,14 +716,14 @@ if __name__ == "__main__":
     window.predictorlistWidget.clear()
     for fileName in config.get('predictorList'):
         window.predictorlistWidget.addItem(os.path.basename(fileName))
-    window.predictantlistWidget.clear()
-    for fileName in config.get('predictantList'):
-        window.predictantlistWidget.addItem(os.path.basename(fileName))
+    window.predictandlistWidget.clear()
+    for fileName in config.get('predictandList'):
+        window.predictandlistWidget.addItem(os.path.basename(fileName))
     if config.get('inputFormat') == "CSV":
         window.CSVRadio.setChecked(True)
     else:
         window.NetCDFRadio.setChecked(True)
-        window.predictantIDcombobox.addItem(config.get('predictantattr', ''))
+        window.predictandIDcombobox.addItem(config.get('predictandattr', ''))
     if config.get('composition') == "Sum":
         window.cumRadio.setChecked(True)
     if config.get('composition') == "Average":
@@ -752,8 +752,8 @@ if __name__ == "__main__":
     window.NetCDFRadio.toggled.connect(change_format_type)
     window.addpredictButton.clicked.connect(addPredictors)
     window.removepredictButton.clicked.connect(removePredictors)
-    window.browsepredictantButton.clicked.connect(addPredictants)
-    window.clearpredictantButton.clicked.connect(clearPredictants)
+    window.browsepredictandButton.clicked.connect(addPredictands)
+    window.clearpredictandButton.clicked.connect(clearPredictands)
     window.CSVRadio.toggled.connect(setInputFormat)
     window.ZoneButton.clicked.connect(addZoneVector)
     window.runButton.clicked.connect(launch_forecast_Thread)

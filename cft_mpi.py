@@ -25,9 +25,9 @@ season_months = {'JFM': ['Jan', 'Feb', 'Mar'], 'FMA': ['Feb', 'Mar', 'Apr'], 'MA
 fcstyear = None
 settingsfile = 'settings.json'
 predictordict = {}
-predictantdict = {}
-predictantdict['stations'] = []
-predictantdict['data'] = None
+predictanddict = {}
+predictanddict['stations'] = []
+predictanddict['data'] = None
 scriptpath = os.path.dirname(os.path.realpath(__file__))
 
 #
@@ -70,9 +70,9 @@ if __name__ == "__main__":
         config['Version'] = version
         config['outDir'] = ''
         config['predictorList'] = []
-        config['predictantList'] = []
-        config['predictantMissingValue'] = -9999
-        config['predictantattr'] = 'pre'
+        config['predictandList'] = []
+        config['predictandMissingValue'] = -9999
+        config['predictandattr'] = 'pre'
         config['fcstPeriodStartMonth'] = 'Oct'
         config['fcstPeriodLength'] = '3month'
         config['trainStartYear'] = 1971
@@ -99,9 +99,9 @@ if __name__ == "__main__":
         print("Output Directory not set!")
         exit(1)
 
-    for file in config.get('predictantList'):
+    for file in config.get('predictandList'):
         if not os.path.isfile(file):
-            print('Predictant file does not exist:', file)
+            print('Predictand file does not exist:', file)
             exit(1)
 
     for file in config.get('predictorList'):
@@ -110,25 +110,25 @@ if __name__ == "__main__":
             exit(1)
 
     if config.get('inputFormat') == 'CSV':
-        if len(config.get('predictantList')) != 0:
-            missing = config.get('predictantMissingValue')
+        if len(config.get('predictandList')) != 0:
+            missing = config.get('predictandMissingValue')
             if len(str(missing)) == 0: missing = -9999
-            input_data = concat_csvs(config.get('predictantList'), missing)
-            predictantdict['data'] = input_data
+            input_data = concat_csvs(config.get('predictandList'), missing)
+            predictanddict['data'] = input_data
             stations = list(input_data['ID'].unique())
-            predictantdict['stations'] = stations
+            predictanddict['stations'] = stations
             nstations = len(stations)
-            predictantdict['lats'], predictantdict['lons'] = [], []
+            predictanddict['lats'], predictanddict['lons'] = [], []
             for n in range(nstations):
                 station_data_all = input_data.loc[input_data['ID'] == stations[n]]
-                predictantdict['lats'].append(station_data_all['Lat'].unique()[0])
-                predictantdict['lons'].append(station_data_all['Lon'].unique()[0])
+                predictanddict['lats'].append(station_data_all['Lat'].unique()[0])
+                predictanddict['lons'].append(station_data_all['Lon'].unique()[0])
         else:
             input_data = None
     elif config.get('inputFormat') == 'NetCDF':
-        if len(config.get('predictantList')) != 0:
-            predictant_data = netcdf_data(config.get('predictantList')[0], param=config.get('predictantattr'))
-            rows, cols = predictant_data.shape()
+        if len(config.get('predictandList')) != 0:
+            predictand_data = netcdf_data(config.get('predictandList')[0], param=config.get('predictandattr'))
+            rows, cols = predictand_data.shape()
 
     if len(config.get('algorithms', [])) == 0:
         print('no algorithms defined. exit')
@@ -160,10 +160,10 @@ if __name__ == "__main__":
         print('\nForecast:', config.get('fcstyear'), fcstPeriod)
         print('Configuration:', input)
         print('Output directory:', config.get('outDir'))
-        print('Predictant: ')
-        for predict in config.get('predictantList'):
+        print('Predictand: ')
+        for predict in config.get('predictandList'):
             print('\t -', os.path.basename(predict))
-        print('Predictant attribute:', config.get('predictantattr'))
+        print('Predictand attribute:', config.get('predictandattr'))
         print('Predictor: ')
         for predict in config.get('predictorList'):
             print('\t -', os.path.basename(predict))
@@ -282,12 +282,12 @@ if __name__ == "__main__":
         sst_arr, sst = None, None
 
         if config.get('inputFormat') == 'CSV':
-            station = predictantdict.get('stations')[st]
-            fcst_unit = forecast_unit(config, predictordict, predictantdict, fcstPeriod, algorithm, station, outdir)
+            station = predictanddict.get('stations')[st]
+            fcst_unit = forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, station, outdir)
             if fcst_unit is not None:
                 args.append(fcst_unit)
         if config.get('inputFormat') == 'NetCDF':
-            fcst_unit = forecast_pixel_unit(config, predictordict, predictant_data, fcstPeriod, algorithm, st)
+            fcst_unit = forecast_pixel_unit(config, predictordict, predictand_data, fcstPeriod, algorithm, st)
             if fcst_unit is not None:
                 args.append(fcst_unit)
 
@@ -361,8 +361,8 @@ if __name__ == "__main__":
                         forecastsdf["Zone"] = np.nan
                         # --------------
                         for n in range(nstations):
-                            station = predictantdict['stations'][n]
-                            szone = whichzone(zonejson, predictantdict['lats'][n], predictantdict['lons'][n], zoneattr)
+                            station = predictanddict['stations'][n]
+                            szone = whichzone(zonejson, predictanddict['lats'][n], predictanddict['lons'][n], zoneattr)
                             forecastsdf.loc[forecastsdf.ID == station, 'Zone'] = szone
                         fcstcsvout = forecastdir + os.sep + fcstprefix + '_zone_members.csv'
                         forecastsdf.to_csv(fcstcsvout, header=True, index=True)
@@ -422,18 +422,18 @@ if __name__ == "__main__":
                 comments = 'predictors:'
                 for predict in config.get('predictorList'):
                     comments = comments + ' ' + os.path.basename(predict).replace(' ', '_')
-                comments = comments + ', predictant: ' + os.path.basename(config.get('predictantList')[0]).replace(' ', '_')
+                comments = comments + ', predictand: ' + os.path.basename(config.get('predictandList')[0]).replace(' ', '_')
                 comments = comments + ', algorithms:'
                 for alg in config.get('algorithms'):
                     comments = comments + ' ' + os.path.basename(alg).replace(' ', '_')
                 # write outputs to NetCDF
-                rows, cols = predictant_data.shape()
-                fclass = np.zeros(shape=predictant_data.shape())
-                HS = np.ones(shape=predictant_data.shape()) * np.nan
-                fcst = np.ones(shape=predictant_data.shape()) * np.nan
-                t3 = np.ones(shape=predictant_data.shape()) * np.nan
-                t2 = np.ones(shape=predictant_data.shape()) * np.nan
-                t1 = np.ones(shape=predictant_data.shape()) * np.nan
+                rows, cols = predictand_data.shape()
+                fclass = np.zeros(shape=predictand_data.shape())
+                HS = np.ones(shape=predictand_data.shape()) * np.nan
+                fcst = np.ones(shape=predictand_data.shape()) * np.nan
+                t3 = np.ones(shape=predictand_data.shape()) * np.nan
+                t2 = np.ones(shape=predictand_data.shape()) * np.nan
+                t1 = np.ones(shape=predictand_data.shape()) * np.nan
                 for row in range(rows):
                     for col in range(cols):
                         point = (row, col)
@@ -482,8 +482,8 @@ if __name__ == "__main__":
                 initial_date.standard_name = 'time'
                 initial_date.long_name = 'forecast start date'
 
-                latitudes[:] = predictant_data.lats
-                longitudes[:] = predictant_data.lons
+                latitudes[:] = predictand_data.lats
+                longitudes[:] = predictand_data.lons
                 fcstclass[:] = fclass
                 hitscore[:] = HS
                 forecast[:] = fcst
@@ -497,7 +497,7 @@ if __name__ == "__main__":
                 output.close()
                 qmlfile = config.get('plots', {}).get('fcstqml', scriptpath+os.sep+'styles'+os.sep+'fcstplot_new.qml')
                 outfcstpng = fcstjsonout = forecastdir + os.sep + fcstprefix + '_forecast.png'
-                plot_forecast_png(predictant_data.lats, predictant_data.lons, fplot, title, qmlfile, outfcstpng)
+                plot_forecast_png(predictand_data.lats, predictand_data.lons, fplot, title, qmlfile, outfcstpng)
                 print('Done in ' + str(convert(time.time() - start_time)))
         print("\nEnd time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     

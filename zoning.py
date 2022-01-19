@@ -280,7 +280,6 @@ if __name__ == "__main__":
         config['rotation']['indx'] = config.get('rotation').get('types').index(window.rotationDcombobox.currentText())
         config['period']['indx'] = config.get('period').get('season').index(window.periodComboBox.currentText())
         # Write configuration to settings file
-        import json
         with open(settingsfile, 'w') as fp:
             json.dump(config, fp, indent=4)
             
@@ -338,7 +337,10 @@ if __name__ == "__main__":
         faw = str(zonepath / "components.csv")
         far = str(zonepath / ("components_" + rotation + ".csv"))
         farpng = str(zonepath / ("components_" + rotation + ".png"))
+        evpng = str(zonepath / ("explained_variance.png"))
         izonespng = str(zonepath / ("izones.png"))
+        with open(str(zonepath / "zoning.json"), 'w') as fp:
+            json.dump(config, fp, indent=4)
         
         # clean outputs
         if os.path.exists(zonejson):
@@ -407,15 +409,26 @@ if __name__ == "__main__":
         print('explained variance')
         window.statusbar.showMessage('computing explained variance')
         explained_variance = fa.explained_variance_.T
-        
+        ncomps = len(explained_variance)
         total_exp_var = explained_variance.sum()
         explained_variance_p, y = [], 0
         for x in explained_variance:
             y = y + x
             explained_variance_p.append(round(100. * (y / total_exp_var),1))
-            
-        print(np.array(explained_variance).round(2))
-        print(explained_variance_p)
+           
+        # scree plot
+        fig, axs = plt.subplots(2, sharex=True)
+        fig.suptitle('Explained Variance (EV)')
+        axs[0].plot(list(range(1,ncomps+1)),explained_variance,'b*')
+        axs[0].set_ylabel('EV per component');
+        axs[1].plot(list(range(1,ncomps+1)),explained_variance_p)
+        axs[1].plot(list(range(1,ncomps+1)),[ExplainedVariance] * ncomps,'r--', label='PEV')
+        axs[1].set_xlabel('Number of components')
+        axs[1].set_ylabel('Cumulative EV (%)')
+        axs[1].set_xticks(list(range(1,len(explained_variance)+1)))
+        plt.savefig(evpng)
+        plt.close(fig)
+        
         n_comps = (np.array(explained_variance_p) <= ExplainedVariance).sum() + 1
         colnames = ['cmp'+str(x) for x in list(range(1,n_comps+1))]
         
@@ -437,7 +450,7 @@ if __name__ == "__main__":
         df2['station'] = stations
         df2['Lat'] = lats
         df2['Lon'] = lons
-        df1.to_csv(far)
+        df2.to_csv(far)
         
         # open base map to get bounds
         with open(base_vector, "r") as read_file:

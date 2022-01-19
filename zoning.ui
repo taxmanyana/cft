@@ -319,7 +319,7 @@
         </property>
         <widget class="QRadioButton" name="NetCDFRadio">
          <property name="enabled">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <property name="geometry">
           <rect>

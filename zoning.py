@@ -22,9 +22,13 @@ from pathlib import Path
 import math
 
 try:
-    from osgeo import gdal, ogr
+    import osgeo.gdal as gdal
 except:
-    pass
+    import gdal
+try:
+    import osgeo.ogr as ogr
+except:
+    import ogr
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QThread, QObject, QDate, QTime, QDateTime, Qt
@@ -360,12 +364,7 @@ if __name__ == "__main__":
         
         input_data = concat_csvs(csvs, missing)
         stations = list(input_data['ID'].unique())
-        nstations = len(stations)
-        lats, lons = [], []
-        for n in range(nstations):
-            station_data_all = input_data.loc[input_data['ID'] == stations[n]]
-            lats.append(station_data_all['Lat'].unique()[0])
-            lons.append(station_data_all['Lon'].unique()[0])
+        nstations_prev = len(stations)
             
         trainyears = list(range(startyr,endyr+1))
         data = pd.DataFrame(columns=[stations], index=trainyears)
@@ -376,10 +375,28 @@ if __name__ == "__main__":
                 if composition == "Sum":
                     data.loc[[year], station] = season_cumulation(station_data, year, period)
                 else:
-                    data.loc[[year], period] = season_average(station_data, year, period)
+                    data.loc[[year], station] = season_average(station_data, year, period)
         
-        print('number of stations',len(stations))
-        window.statusbar.showMessage('number of stations',len(stations))
+        # remove gaps
+        data.dropna(axis=1, inplace=True)
+        data.to_csv(datacsv)
+        data = pd.read_csv(datacsv, index_col=0)
+        stations = list(data.columns)
+        nstations = len(stations)
+        if nstations_prev != nstations:
+            print(str(nstations_prev-nstations)+' stations removed due to gaps')   
+            window.statusbar.showMessage(str(nstations_prev-nstations)+' stations removed due to gaps')
+        if nstations <= 1:
+            print(str(nstations)+' stations without gaps, not enough for zoning.')   
+            window.statusbar.showMessage(str(nstations)+' stations without gaps, not enough for zoning.')
+            return
+        lats, lons = [], []
+        for n in range(nstations):
+            station_data_all = input_data.loc[input_data['ID'] == stations[n]]
+            lats.append(station_data_all['Lat'].unique()[0])
+            lons.append(station_data_all['Lon'].unique()[0])
+        print('number of stations '+str(nstations))
+        window.statusbar.showMessage('number of stations '+str(nstations))
         data.to_csv(datacsv)
         
         data.columns = ['s'+str(x) for x in range(len(stations))]
@@ -548,7 +565,7 @@ if __name__ == "__main__":
         
         # elbow plot
         if nzones is None:        
-            if os.path.exists(fzonepath / 'elbowplot.png'):
+            if os.path.exists(zonepath / 'elbowplot.png'):
                 os.remove(zonepath / 'elbowplot.png')
             plt.figure()
             plt.plot(klist, wcss, 'bx-')

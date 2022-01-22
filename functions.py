@@ -66,7 +66,8 @@ class csv_data:
         if self.month not in self.dataset.columns:
             raise ValueError('column "' + self.month + '" not detected in predictor csv. check format')
         if 'year' not in self.dataset.columns:
-            raise ValueError('column "Year" not detected in predictor csv. check format')
+            self.dataset.index.rename('year', inplace=True)
+            self.dataset.reset_index(inplace=True)
         
     def is_csv(self):
         f = open(self.file, "r")
@@ -507,10 +508,9 @@ def write_zone_forecast(zonefcstprefix, fcstzone_df, forecastjson, ZoneID, color
         poly = feature['geometry']
         avgHS = feature['properties'].get('avgHS', None)
         color = colors[fclass]
-        xs = [x[0] for x in feature['geometry']['coordinates'][0][0]]
-        ys = [x[1] for x in feature['geometry']['coordinates'][0][0]]
-        midx = np.min(xs) + 0.25 * (np.max(xs) - np.min(xs))
-        midy = np.max(ys) - 0.25 * (np.max(ys) - np.min(ys))
+        minx, miny, maxx, maxy = shape(feature["geometry"]).bounds
+        midx = minx + 0.25 * (maxx - minx)
+        midy = maxy - 0.25 * (maxy - miny)
         ax.add_patch(PolygonPatch(poly, fc=color, ec='#6699cc', alpha=0.5, zorder=2))
         if avgHS is not None:
             name = str(feature['properties'][ZoneID]) + ' ' + str(int(float(avgHS)+0.5)) + '%'

@@ -155,16 +155,4 @@ if %errorlevel% equ 0 (
  echo descartes upgraded successfully
 )
 echo.
-echo upgrading pyqt5...
-python -m pip install --upgrade pyqt5
-if %errorlevel% equ 0 (
- echo pyqt5 upgraded successfully
-)
-echo.
-echo upgrading pyqt5-sip...
-python -m pip install --upgrade pyqt5-sip
-if %errorlevel% equ 0 (
- echo pyqt5-sip upgraded successfully
-)
-echo.
 pause

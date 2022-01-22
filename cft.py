@@ -37,7 +37,7 @@ def concat_csvs(csvs, missing):
     for file in csvs:
         dfs_files.append(pd.read_csv(file, encoding = 'ISO-8859-9'))
     dfs_files = pd.concat((dfs_files), axis=0)
-    dfs_files = dfs_files.replace(missing, np.nan)
+    dfs_files = dfs_files.replace(str(missing), np.nan)
     dfs_files = dfs_files.dropna(how='all')
     dfs_files['ID'] = dfs_files['ID'].apply(rename)
     return dfs_files
@@ -384,9 +384,6 @@ if __name__ == "__main__":
                 param = predictor_data.param
                 timearr = predictor_data.times()
                 sst = predictor_data.tslice()
-                predictordict[predictorName] = {}
-                predictordict[predictorName]['lats'] = predictor_data.lats
-                predictordict[predictorName]['lons'] = predictor_data.lons
                 rows, cols = predictor_data.shape()
                 year_arr, mon_arr = [], []
                 for x in timearr:
@@ -397,7 +394,8 @@ if __name__ == "__main__":
                         mon_arr.append(x)
 
                 if len(year_arr) == 0:
-                    print("Predictor (" + param + ") does not contain any data for ", predictorMonth)
+                    status = "Predictor (" + predictorName + ") does not contain any data for " + predictorMonth
+                    print(status)
                     continue
 
                 if predictorMonthIndex >= fcstPeriodIndex:
@@ -412,26 +410,26 @@ if __name__ == "__main__":
                             ", cannot be used to forecast " + str(config.get('fcstyear')) + ' ' + fcstPeriod
                         print(status)
                         window.statusbar.showMessage(status)
-                        return None
+                        continue
                     if fcstPeriodIndex >= predictorMonthIndex:
                         status = "Predictor ("+param+") for " + predictorMonth + " goes up to " + str(year_arr[-1]) + \
                             ", cannot be used to forecast " + str(config.get('fcstyear')) + ' ' + fcstPeriod
                         print(status)
                         window.statusbar.showMessage(status)
-                        return None
+                        continue
 
                 if int(config.get('fcstyear')) <= int(config.get('trainEndYear')):
                     status = "Cannot forecast " + str(config.get('fcstyear')) + " as it is not beyond training period"
                     print(status)
                     window.statusbar.showMessage(status)
-                    return None
+                    continue
 
                 if predictorStartYr < year_arr[0]:
                     status = "Predictor ("+param+") data starts in " + str(year_arr[0]) + \
                         ", predictor require to start in " + str(predictorStartYr)
                     print(status)
                     window.statusbar.showMessage(status)
-                    return None
+                    continue
 
                 status = 'predictor data to be used: ' + str(predictorStartYr) + predictorMonth + ' to ' + \
                          str(predictorEndYr) + predictorMonth
@@ -448,6 +446,9 @@ if __name__ == "__main__":
                     indxtimearr = timearr.index(vtimearr)
                     sst_arr[y] = np.array(sst[indxtimearr])
 
+                predictordict[predictorName] = {}
+                predictordict[predictorName]['lats'] = predictor_data.lats
+                predictordict[predictorName]['lons'] = predictor_data.lons
                 predictordict[predictorName]['param'] = param
                 predictordict[predictorName]['predictorMonth'] = predictorMonth
                 predictordict[predictorName]['data'] = sst_arr
@@ -500,7 +501,7 @@ if __name__ == "__main__":
             print('Writing Forecast...')
             forecastdir = outdir + os.sep + "Forecast"
             os.makedirs(forecastdir, exist_ok=True)
-            fcstprefix = str(config.get('fcstyear')) + fcstPeriod + '_' + predictordict[predictorName]['predictorMonth']
+            fcstprefix = str(config.get('fcstyear')) + fcstPeriod + '_' + predictorMonth
             colors = config.get('colors', {})
             fcstName = str(config.get('fcstyear')) + fcstPeriod
             if config.get('inputFormat') == 'CSV':
@@ -557,8 +558,7 @@ if __name__ == "__main__":
                         forecastsdf.to_csv(fcstcsvout, header=True, index=True)
 
                         # generate zone forecast
-                        zonefcstprefix = forecastdir + os.sep + str(config.get('fcstyear')) + fcstPeriod + '_' + \
-                                         predictordict[predictorName]['predictorMonth']
+                        zonefcstprefix = forecastdir + os.sep + str(config.get('fcstyear')) + fcstPeriod + '_' + predictorMonth
                         if int(config.get('PODfilter', 1)) == 1:
                             forecastsdf = forecastsdf[forecastsdf.apply(lambda x: good_POD(x.Prob, x['class']), axis=1)]
                         highskilldf = forecastsdf[forecastsdf.HS.ge(int(config.get('minHSscore', 50)))][['HS', 'class', 'Zone']]

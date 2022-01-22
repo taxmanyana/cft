@@ -5,7 +5,7 @@
         "/cm/shared/apps/cft/cft/data/GPH850_Jul_1960_2020.nc",
         "/cm/shared/apps/cft/cft/data/SST_Jul_1960_2020.nc"
     ],
-    "predictantList": [
+    "predictandList": [
         "/cm/shared/apps/cft/cft/data/chirps_monthly_1981_2020_BWA.csv"
     ],
     "predictantMissingValue": -9999,

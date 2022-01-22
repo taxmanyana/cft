@@ -1,7 +1,7 @@
 @echo off
 
 echo.
-echo CFT Startup Script
+echo Zoning Startup Script
 echo.
 SET mypath=%~dp0
 set mypath=%mypath:~0,-1%
@@ -53,4 +53,8 @@ if exist %OSGEO4W_ROOT%\apps\%QGISAP%\python set PYTHONPATH=%OSGEO4W_ROOT%\apps\
 
 :startapp
 echo.
-START /B python cft.py
+echo PATH: %PATH%
+echo.
+echo PYTHONPATH: %PYTHONPATH%
+echo.
+START /B python zoning.py

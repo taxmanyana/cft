@@ -54,3 +54,4 @@ if exist %OSGEO4W_ROOT%\apps\%QGISAP%\python set PYTHONPATH=%OSGEO4W_ROOT%\apps\
 :startapp
 echo.
 START /B python cft.py
+pause

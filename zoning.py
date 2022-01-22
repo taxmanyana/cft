@@ -319,13 +319,6 @@ if __name__ == "__main__":
     def exec_zoning():
         global config
         write_config()
-        
-        # check if required binaries are available
-        retval = os.system("ogr2ogr --help-general")
-        if retval != 0:
-            print('ogr2ogr command not found, required!')
-            window.statusbar.showMessage('ogr2ogr command not found, required!')
-            return
 
         gdal_polygonize = None
         for d in os.environ['PATH'].split(os.pathsep):
@@ -335,7 +328,7 @@ if __name__ == "__main__":
         
         if gdal_polygonize == None:
             print('gdal_polygonize.py command not found, required!')
-            window.statusbar.showMessage('gdal_polygonize.py command not found, required!')
+            window.statusbar.showMessage('gdal binaries not found, required!')
             return
         
         scriptpath = os.path.dirname(os.path.realpath(__file__))
@@ -370,13 +363,14 @@ if __name__ == "__main__":
             sys.exit()
         
         # create output directory
-        zonepath = (outdir / vname).joinpath(period + '_' + str(startyr)  + '_' + str(endyr))
+        period_text = period + '_' + str(startyr)  + '_' + str(endyr) 
+        zonepath = (outdir / vname).joinpath(period_text)
         os.makedirs(zonepath, exist_ok=True)
         
         # outputs 
-        dst_layername = "izones"
+        dst_layername = (period_text + "_zones").lower()
         dst_zones = str(zonepath / (dst_layername + ".geojson"))
-        zonejson = str(zonepath / (vname + "_zones.geojson"))
+        zonejson = str(zonepath / (vname + "_" + period_text.lower() + "_zones.geojson"))
         zonejson_clean = str(zonepath / (dst_layername + "_clean.geojson"))
         zonejson_smooth = str(zonepath / (dst_layername + "_smooth.geojson"))
         zonenc = str(zonepath / "izones.nc")
@@ -429,8 +423,8 @@ if __name__ == "__main__":
         
         # remove gaps
         data.dropna(axis=1, inplace=True)
-        data.to_csv(datacsv)
-        data = pd.read_csv(datacsv, index_col=0)
+        # data.to_csv(datacsv)
+        # data = pd.read_csv(datacsv, index_col=0)
         stations = list(data.columns)
         nstations = len(stations)
         if nstations_prev != nstations:
@@ -515,7 +509,7 @@ if __name__ == "__main__":
             yy.append(maxy)
             
         minx = int(np.min(mx)-1) * 1.0
-        maxx = round(np.max(mx)+0.5,0)
+        maxx = round(np.max(xx)+0.5,0)
         miny = int(np.min(my)-1) * 1.0
         maxy = round(np.max(yy)+0.5,0)
         
@@ -524,6 +518,7 @@ if __name__ == "__main__":
         if maxx < round(max(lons)+0.5,0): maxx = round(max(lons)+0.5,0)
         if miny > int(min(lats)-1) * 1.0: miny = int(min(lats)-1) * 1.0
         if maxy < round(max(lats)+0.5,0): maxy = round(max(lats)+0.5,0)
+
         x = np.array(lons)
         y = np.array(lats)
         xs = np.arange(minx,maxx+gridsize,gridsize)
@@ -616,7 +611,7 @@ if __name__ == "__main__":
             poly = feature['geometry']
             ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
         ax.plot(x,y,'k.')
-        ax.title.set_text('zones')
+        ax.title.set_text(period_text + ' Zones')
         ax.title.set_fontsize(10)
         ax.invert_yaxis()
         ax.set_xlim([minx, maxx])
@@ -647,7 +642,7 @@ if __name__ == "__main__":
         # polygonize the raster
         print('polygonizing the zone raster into a geojson')
         window.statusbar.showMessage('polygonizing the zone raster into a geojson')
-        retval = os.system("python " + gdal_polygonize + " -b 1 -f GeoJSON " + zonenc + " " + dst_zones + " izones Zone")
+        retval = os.system('python ' + gdal_polygonize + ' -b 1 -f GeoJSON "' + zonenc + '" "' + dst_zones + '" izones Zone')
         if retval != 0:
             print('failed to polygonize the zone raster into a geojson')
             window.statusbar.showMessage('failed to polygonize the zone raster into a geojson')
@@ -739,7 +734,7 @@ if __name__ == "__main__":
         
         # clip intermediate zone layer with base map
         print('clip intermediate zone layer with base map')
-        retval = os.system("ogr2ogr -f GeoJSON -clipsrc " + base_vector + " " + zonejson + " " + zonejson_clean)
+        retval = os.system('ogr2ogr -f GeoJSON -clipsrc "' + base_vector + '" "' + zonejson + '" "' + zonejson_clean + '"')
         if retval != 0:
             print('failed to clip intermediate zone layer with base map')
             window.statusbar.showMessage('failed to clip intermediate zone layer with base map')

@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jan  2 12:59:45 2022
 
 @author: thembani
 """
-
-
 from functions import *
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,14 +18,6 @@ import geojson
 from pathlib import Path
 import math
 
-try:
-    import osgeo.gdal as gdal
-except:
-    import gdal
-try:
-    import osgeo.ogr as ogr
-except:
-    import ogr
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QThread, QObject, QDate, QTime, QDateTime, Qt
@@ -139,6 +128,45 @@ def smooth(shp,out,name,smooth_size):
         feature.SetField(0, ID)
         oLayer.CreateFeature(feature)
 
+def create_nc(outfile, zonegrid, lats, lons):
+    global config
+    rows = len(lats)
+    cols = len(lons)
+    startyr = str(config.get('startyr'))
+    endyr = str(config.get('endyr'))
+    period = config.get('period').get('season')[int(config.get('period').get('indx'))]
+    title = 'Rasterized zonal map ' + period + ' ' + startyr + ' - ' + endyr 
+    timenow = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+    output = Dataset(outfile, 'w', format='NETCDF4')
+    output.description = title
+    output.comments = 'Created ' + timenow
+    output.source = 'CFT'
+    output.history = 'Created ' + timenow
+    lat = output.createDimension('lat', rows)
+    lon = output.createDimension('lon', cols)
+    T = output.createDimension('T', 1)
+    initial_date = output.createVariable('target', np.float64, ('T',))
+    latitudes = output.createVariable('lat', np.float32, ('lat',))
+    longitudes = output.createVariable('lon', np.float32, ('lon',))
+    zones = output.createVariable('Zones', np.uint8, ('T', 'lat', 'lon'))
+    latitudes.units = 'degree_north'
+    latitudes.axis = 'Y'
+    latitudes.long_name = 'Latitude'
+    latitudes.standard_name = 'Latitude'
+    longitudes.units = 'degree_east'
+    longitudes.axis = 'X'
+    longitudes.long_name = 'Longitude'
+    longitudes.standard_name = 'Longitude'
+    initial_date.units = 'days since ' + timenow
+    initial_date.axis = 'T'
+    initial_date.calendar = 'standard'
+    initial_date.standard_name = 'time'
+    initial_date.long_name = 'zoning date'
+    latitudes[:] = lats
+    longitudes[:] = lons
+    zones[:] = zonegrid
+    zones.units = 'Zone ID'
+    output.close()
 
 #
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -291,6 +319,25 @@ if __name__ == "__main__":
     def exec_zoning():
         global config
         write_config()
+        
+        # check if required binaries are available
+        retval = os.system("ogr2ogr --help-general")
+        if retval != 0:
+            print('ogr2ogr command not found, required!')
+            window.statusbar.showMessage('ogr2ogr command not found, required!')
+            return
+
+        gdal_polygonize = None
+        for d in os.environ['PATH'].split(os.pathsep):
+            if (Path(d) / 'gdal_polygonize.py').exists():
+                gdal_polygonize = str((Path(d) / 'gdal_polygonize.py'))
+                break
+        
+        if gdal_polygonize == None:
+            print('gdal_polygonize.py command not found, required!')
+            window.statusbar.showMessage('gdal_polygonize.py command not found, required!')
+            return
+        
         scriptpath = os.path.dirname(os.path.realpath(__file__))
         scriptpath = Path(scriptpath)
         outdir = Path(config.get('outdir'))
@@ -332,7 +379,7 @@ if __name__ == "__main__":
         zonejson = str(zonepath / (vname + "_zones.geojson"))
         zonejson_clean = str(zonepath / (dst_layername + "_clean.geojson"))
         zonejson_smooth = str(zonepath / (dst_layername + "_smooth.geojson"))
-        zonetif = str(zonepath / "izones.tif")
+        zonenc = str(zonepath / "izones.nc")
         datacsv = str(zonepath / "data.csv")
         faw = str(zonepath / "components.csv")
         far = str(zonepath / ("components_" + rotation + ".csv"))
@@ -349,8 +396,8 @@ if __name__ == "__main__":
         if os.path.exists(dst_zones):
             os.remove(dst_zones)
         
-        if os.path.exists(zonetif):
-            os.remove(zonetif)
+        if os.path.exists(zonenc):
+            os.remove(zonenc)
         
         if os.path.exists(faw):
             os.remove(faw)
@@ -367,9 +414,10 @@ if __name__ == "__main__":
         input_data = concat_csvs(csvs, missing)
         stations = list(input_data['ID'].unique())
         nstations_prev = len(stations)
-            
         trainyears = list(range(startyr,endyr+1))
-        data = pd.DataFrame(columns=[stations], index=trainyears)
+        data = pd.DataFrame(columns=stations)
+        data['Year'] = trainyears
+        data.set_index(['Year'], inplace=True)    
         
         for station in stations:
             station_data = stationdata(input_data, station, period)
@@ -436,7 +484,7 @@ if __name__ == "__main__":
         fa.set_params(n_components=n_comps)
         fa.fit(X)
         components = fa.components_.T
-        df1 = pd.DataFrame(components,columns = [colnames])
+        df1 = pd.DataFrame(components,columns = colnames)
         df1['station'] = stations
         df1['Lat'] = lats
         df1['Lon'] = lons
@@ -446,7 +494,7 @@ if __name__ == "__main__":
         fa.set_params(n_components=n_comps)
         fa.fit(X)
         components = fa.components_.T
-        df2 = pd.DataFrame(components,columns = [colnames])
+        df2 = pd.DataFrame(components,columns = colnames)
         df2['station'] = stations
         df2['Lat'] = lats
         df2['Lon'] = lons
@@ -556,7 +604,7 @@ if __name__ == "__main__":
         db = cluster.KMeans(n_clusters = n_clusters, random_state=42).fit(comps.T)
         zi = db.labels_.reshape(len(ys), len(xs))
         print("number of zones ", len(np.unique(db.labels_)))
-        window.statusbar.showMessage("number of zones ", len(np.unique(db.labels_)))
+        window.statusbar.showMessage("number of zones " + str(len(np.unique(db.labels_))))
         # plot
         DPI = 150
         W = 750
@@ -577,7 +625,8 @@ if __name__ == "__main__":
         plt.close(fig)
         
         # elbow plot
-        if nzones is None:        
+        if nzones is None:      
+            print("elbow plot")
             if os.path.exists(zonepath / 'elbowplot.png'):
                 os.remove(zonepath / 'elbowplot.png')
             plt.figure()
@@ -590,29 +639,19 @@ if __name__ == "__main__":
             plt.savefig(zonepath / 'elbowplot.png',dpi=100)
             plt.close(fig)
         
-        # pcreate a raster for the zones
-        drv = gdal.GetDriverByName("GTiff")
-        ds = drv.Create(zonetif, nx, ny, eType=gdal.GDT_Byte)
-        xres = (maxx - minx) / float(nx)
-        yres = (maxy - miny) / float(ny)
-        geotransform = (minx, gridsize, 0, maxy, 0, -gridsize)
-        ds.SetProjection(proj)
-        ds.SetGeoTransform(geotransform)
-        ds.GetRasterBand(1).WriteArray(np.flip(zi, axis=0))
-        srcband = ds.GetRasterBand(1)
-        
-        # polygonize the zone raster into a geojson
-        drv2 = ogr.GetDriverByName("GeoJSON")
-        dst_ds = drv2.CreateDataSource(dst_zones)
-        dst_layer = dst_ds.CreateLayer(dst_layername, srs = None )
-        newField = ogr.FieldDefn('Zone', ogr.OFTReal)
-        dst_layer.CreateField(newField)
-        gdal.Polygonize(srcband, None, dst_layer, 0, [])
-        
-        # close the data sources
-        ds = None
-        dst_ds = None
-        
+        # create a raster for the zones
+        print('creating zone NetCDF')
+        window.statusbar.showMessage('creating zone NetCDF')
+        create_nc(zonenc, zi, ys, xs)
+
+        # polygonize the raster
+        print('polygonizing the zone raster into a geojson')
+        window.statusbar.showMessage('polygonizing the zone raster into a geojson')
+        retval = os.system("python " + gdal_polygonize + " -b 1 -f GeoJSON " + zonenc + " " + dst_zones + " izones Zone")
+        if retval != 0:
+            print('failed to polygonize the zone raster into a geojson')
+            window.statusbar.showMessage('failed to polygonize the zone raster into a geojson')
+            return
         
         # clean the vector zone map
         print('cleaning the vector zone map')
@@ -673,7 +712,7 @@ if __name__ == "__main__":
                     "type": "Feature", 
                     "properties": 
                         { 
-                            "Zone": uniquezones[n]
+                            "Zone": int(uniquezones[n])
                                 }, 
                             "geometry": 
                                 { 
@@ -683,28 +722,10 @@ if __name__ == "__main__":
                                 })
         
         new_map = geojson.feature.FeatureCollection(features)
-        new_map["name"] = "Zone"
-                
+        new_map["name"] = "Zones"
+
         with open(zonejson_clean, 'w') as fp:
             geojson.dump(new_map, fp, sort_keys=False, ensure_ascii=False)
-        
-        # open intermediate zone layer for clipping
-        print('open intermediate zone layer for clipping')
-        window.statusbar.showMessage('opening intermediate zone layer for clipping')
-        inDataSource = drv2.Open(zonejson_clean)
-        inLayer = inDataSource.GetLayer()
-        
-        # open base map for clipping
-        print('open base map for clipping')
-        window.statusbar.showMessage('opening base map for clipping')
-        inClipSource = drv2.Open(base_vector)
-        inClipLayer = inClipSource.GetLayer()
-        
-        # create output ector file for the final zones
-        print('create output ector file for the final zones')
-        window.statusbar.showMessage('creating output ector file for the final zones')
-        outDataSource = drv2.CreateDataSource(zonejson)
-        outLayer = outDataSource.CreateLayer('Zones', srs = None )
         
         # perform smoothing if activated
         if config.get('smoothing', 0):
@@ -714,13 +735,15 @@ if __name__ == "__main__":
             smooth(zonejson_clean,zonejson_smooth,dst_layername,smooth_size)
             # open base map for clipping
             print('opening smoothed map for clipping')
-            inDataSource = drv2.Open(zonejson_smooth)
-            inLayer = inDataSource.GetLayer()
+            zonejson_clean = zonejson_smooth
         
         # clip intermediate zone layer with base map
         print('clip intermediate zone layer with base map')
-        window.statusbar.showMessage('clipping intermediate zone layer with base map')
-        ogr.Layer.Clip(inLayer, inClipLayer, outLayer)
+        retval = os.system("ogr2ogr -f GeoJSON -clipsrc " + base_vector + " " + zonejson + " " + zonejson_clean)
+        if retval != 0:
+            print('failed to clip intermediate zone layer with base map')
+            window.statusbar.showMessage('failed to clip intermediate zone layer with base map')
+            return
         
         # close data sources
         print('close the data sources')

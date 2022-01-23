@@ -4,7 +4,7 @@ Climate Forecasting Toolbox
 
 INTRODUCTION
 ------------
-The Climate Forecasting Toolbox is a Python based tool for statistical climate forecasting applications. 
+The Climate Forecasting Toolbox is a Python based tool for statistical climate forecasting application. 
 
 CREDITS
 =======

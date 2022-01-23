@@ -362,6 +362,12 @@ if __name__ == "__main__":
             window.statusbar.showMessage("output directory does not exist")
             sys.exit()
         
+        # check if input GeoJSON exists
+        if not os.path.exists(base_vector):
+            print("input GeoJSON file does not exist")
+            window.statusbar.showMessage("input GeoJSON file does not exist")
+            sys.exit()
+        
         # create output directory
         period_text = period + '_' + str(startyr)  + '_' + str(endyr) 
         zonepath = (outdir / vname).joinpath(period_text)

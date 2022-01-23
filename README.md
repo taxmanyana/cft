@@ -9,20 +9,20 @@ The Climate Forecasting Toolbox is a Python based tool for statistical climate f
 CREDITS
 =======
 Developer: Thembani Moitlhobogi
-Methodologies: Mduduzi Sunshine Gamedze
+Climatologist: Mduduzi Sunshine Gamedze
 
 
 SOURCE CODE
 ------------
-The CFT source code is maintained at:  https://github.com/taxmanyana/cft.git
+The CFT code is maintained at:  https://github.com/taxmanyana/cft.git
 
 INSTALLATION ON WINDOWS
 --------------------
-1. Ensure you have installed the latest version of QGIS 3 in your computer
-2. Unpack (unzip) the cft-x.x.x.zip ZIP file to a directory of your choosing (e.g. My Documents)
+1. Ensure you have installed the latest long term release version of QGIS 3 in your computer
+2. Unpack (unzip) the cft-x.x.x.zip ZIP file to a directory of your choosing (e.g. Documents)
 3. Navigate into the extracted folder "cft-x.x.x" 
-4. Right-click the "install-cft-modules.bat" and select "Run as Administrator" to install the required python modules (internet connection required)
-5. Once installed, CFT is easily be run by double-clicking on "start_cft.bat"
+4. Right-click the "install-qgis-modules.bat" and select "Run as Administrator" to update the required python modules (internet connection required)
+5. Once installed, CFT or the Zoning tool is easily be run by double-clicking on "start_cft.bat" or "start_zoning.bat"
 
 INSTALLATION ON LINUX
 --------------------
@@ -50,19 +50,9 @@ ALTERNATIVE INSTALLATION ON LINUX (FOR UBUNTU ONLY)
 
 
 
-FEATURES
+MAIN FEATURES
 --------
-- Can easily select a year to forecast
-- Option to forecast a 3-month season, or a single month
-- Adjustable model training period
-- Supports multiple predictors (in NetCDF format). Tool will loop and generate forecast for each predictor
-- Support for gridded ground data (NetCDF) as the predictand
-- Supports point (station) as the predictand
-- Supports season cumulation (rainfall) or season average (temperature) functions
-- Supports Linear Regression and Artificial Intelligence (Multilayer Perceptron regression)
-- For station (point) data, a forecast can be summarized per zone, where a weighted average forecast is produced from the stations within the zone
-- Computes skill scores for each forecast
-
-Future developments
-- Validates forecasts, if ground data is available for forecast period
-
+- Create homogenous zones for a country/region
+- Forecast based on existing indices (CSV/Text) data, or can detect high correlation areas from gridded data (NetCDF) to use as input
+- Artificial Intelligence (MLP) and Linear Regression statistical forecasting methods
+- Predictand in NetCDF and CSV format

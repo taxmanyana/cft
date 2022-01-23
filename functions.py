@@ -845,7 +845,10 @@ def run_model_skill(fcst_df, fcstPeriod, fcstcol, r2score, training_actual):
 def nc_unit_split(config, predictordict, fcstPeriod, comb):
     point, pr, al = comb
     algorithm = config.get('algorithms')[al]
-    predictor = predictordict[list(predictordict.keys())[pr]]
+    try:
+        predictor = predictordict[list(predictordict.keys())[pr]]
+    except:
+        return None
     predictor['Name'] = list(predictordict.keys())[pr]
     predictand_data = netcdf_data(config.get('predictandList')[0], param=config.get('predictandattr'))
     return forecast_pixel_unit(config, predictor, predictand_data, fcstPeriod, algorithm, point)

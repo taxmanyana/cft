@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jan  2 12:59:45 2022
-
 @author: thembani
 """
 from functions import *
@@ -15,7 +13,6 @@ import pandas as pd
 import os, time, sys, re
 from datetime import datetime
 import geojson
-from pathlib import Path
 import math
 
 

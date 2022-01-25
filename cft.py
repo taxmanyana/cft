@@ -1,3 +1,6 @@
+"""
+@author: thembani
+"""
 import os, sys, time, threading
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
@@ -687,7 +690,8 @@ if __name__ == "__main__":
                     output.close()
                     qmlfile = config.get('plots', {}).get('fcstqml', 'styles'+os.sep+'fcstplot_new.qml')
                     outfcstpng = fcstjsonout = forecastdir + os.sep + fcstprefix + '_forecast.png'
-                    plot_forecast_png(predictand_data.lats, predictand_data.lons, fplot, title, qmlfile, outfcstpng)
+                    base_mapfile = Path(config.get('plots', {}).get('basemap', ''))
+                    plot_forecast_png(predictand_data.lats, predictand_data.lons, fplot, title, qmlfile, base_mapfile, outfcstpng)
                     window.statusbar.showMessage('Done in '+str(convert(time.time()-start_time)))
                     print('Done in ' + str(convert(time.time() - start_time)))
                 else:

@@ -1,3 +1,6 @@
+"""
+@author: thembani
+"""
 import os, re, time
 import pandas as pd
 import matplotlib
@@ -15,6 +18,7 @@ from sklearn.neural_network import MLPRegressor
 from netCDF4 import Dataset
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
+from pathlib import Path
 import warnings
 import numpy as np
 import geojson, json
@@ -200,7 +204,7 @@ class netcdf_data:
         if self.Y is not None: lenY = len(self.lats)
         return(lenY, lenX)
 
-def plot_forecast_png(lats, lons, fcst, title, qmlfile, outputfile):
+def plot_forecast_png(lats, lons, fcst, title, qmlfile, base_vector, outputfile):
     if not os.path.exists(qmlfile):
         return
     # design colormap
@@ -242,11 +246,21 @@ def plot_forecast_png(lats, lons, fcst, title, qmlfile, outputfile):
            if y % 2 == 0: major_lats.append(y)
            if (y % 1 == 0) and (y % 2 != 0): minor_lats.append(y)
     
+    H = W * (ymax - ymin) / (xmax - xmin)
     # create and plot map figure
     fig = plt.figure(figsize=(W/float(DPI), H/float(DPI)), frameon=True, dpi=DPI)
     ax = fig.add_subplot(111)
     x, y = np.meshgrid(lons, lats)
     cs = plt.pcolormesh(x,y,fcst,cmap=cmap,norm=norm)
+    if base_vector.exists():
+        # open base map to get bounds
+        with open(base_vector, "r") as read_file:
+            base_map = geojson.load(read_file)
+        for feature in base_map['features']:
+            poly = feature['geometry']
+            ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
     plt.title(title, fontsize=10)
     plt.xlabel('Longitude', fontsize=8)
     plt.ylabel('Latitude', fontsize=8)

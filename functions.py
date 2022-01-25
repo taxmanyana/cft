@@ -251,7 +251,7 @@ def plot_forecast_png(lats, lons, fcst, title, qmlfile, base_vector, outputfile)
     fig = plt.figure(figsize=(W/float(DPI), H/float(DPI)), frameon=True, dpi=DPI)
     ax = fig.add_subplot(111)
     x, y = np.meshgrid(lons, lats)
-    cs = plt.pcolormesh(x,y,fcst,cmap=cmap,norm=norm)
+    cs = plt.pcolormesh(x,y,fcst,cmap=cmap,norm=norm, shading='auto')
     if base_vector.exists():
         # open base map to get bounds
         with open(base_vector, "r") as read_file:
@@ -1416,8 +1416,8 @@ def forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, 
             if (nbasins == 1) and (int(config.get('plots', {}).get('regrcsvs', 1)) == 1):
                 graphcpng = mlpdirout + os.sep + prefix + '_correlation-graph.png'
                 graphdf = mlp_fcstdf.copy()
-                graphdf[prefixParam["Param"]] = sst_arr
-                plot_correlation_graph(graphdf, fcstPeriod, predictorName, predictorName + '_MLP', graphcpng)
+                graphdf[prefixParam["Param"]] = np.array(combo_basin_matrix).flatten()
+                plot_correlation_graph(graphdf, fcstPeriod, prefixParam["Param"], predictorName + '_MLP', graphcpng)
 
     if algorithm == 'LR':
         # start_time = time.time()
@@ -1473,8 +1473,8 @@ def forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, 
         if (nbasins == 1) and (int(config.get('plots', {}).get('regrcsvs', 1)) == 1):
             graphcpng = lrdirout+ os.sep + prefix + '_correlation-graph.png'
             graphdf = lr_fcstdf.copy()
-            graphdf[prefixParam["Param"]] = sst_arr
-            plot_correlation_graph(graphdf, fcstPeriod, predictorName, predictorName + '_LR', graphcpng)
+            graphdf[prefixParam["Param"]] = np.array(combo_basin_matrix).flatten()
+            plot_correlation_graph(graphdf, fcstPeriod, prefixParam["Param"], predictorName + '_LR', graphcpng)
 
     # plot the forecast graphs
     if (len(stationYF_dfs) > 0) and (int(config.get('plots', {}).get('fcstgraphs', 1)) == 1):
@@ -1782,8 +1782,8 @@ def forecast_station(config, predictordict, predictanddict, fcstPeriod, outdir, 
                     if (nbasins == 1) and (int(config.get('plots', {}).get('regrcsvs', 1)) == 1):
                         graphcpng = mlpdirout + os.sep + prefix + '_correlation-graph.png'
                         graphdf = mlp_fcstdf.copy()
-                        graphdf[prefixParam["Param"]] = sst_arr
-                        plot_correlation_graph(graphdf, fcstPeriod, predictorName, predictorName + '_MLP', graphcpng)
+                        graphdf[prefixParam["Param"]] = np.array(combo_basin_matrix).flatten()
+                        plot_correlation_graph(graphdf, fcstPeriod, prefixParam["Param"], predictorName + '_MLP', graphcpng)
 
             if algorithm == 'LR':
                 # start_time = time.time()
@@ -1840,8 +1840,8 @@ def forecast_station(config, predictordict, predictanddict, fcstPeriod, outdir, 
                 if (nbasins == 1) and (int(config.get('plots', {}).get('regrcsvs', 1)) == 1):
                     graphcpng = lrdirout+ os.sep + prefix + '_correlation-graph.png'
                     graphdf = lr_fcstdf.copy()
-                    graphdf[prefixParam["Param"]] = sst_arr
-                    plot_correlation_graph(graphdf, fcstPeriod, predictorName, predictorName + '_LR', graphcpng)
+                    graphdf[prefixParam["Param"]] = np.array(combo_basin_matrix).flatten()
+                    plot_correlation_graph(graphdf, fcstPeriod, prefixParam["Param"], predictorName + '_LR', graphcpng)
 
     # plot the forecast graphs
     if (len(stationYF_dfs) > 0) and (int(config.get('plots', {}).get('fcstgraphs', 1)) == 1):

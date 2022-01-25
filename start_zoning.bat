@@ -29,6 +29,7 @@ if not exist %OSGEO4W_ROOT%\bin\py3_env.bat echo py3_env.bat does not exist
 
 if exist %OSGEO4W_ROOT%\bin\o4w_env.bat call %OSGEO4W_ROOT%\bin\o4w_env.bat
 
+set QT_AUTO_SCREEN_SCALE_FACTOR=1
 if not exist %OSGEO4W_ROOT%\bin\qt5_env.bat goto setqtenv
 call %OSGEO4W_ROOT%\bin\qt5_env.bat
 goto setpyenv

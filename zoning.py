@@ -462,14 +462,15 @@ if __name__ == "__main__":
             explained_variance_p.append(round(100. * (y / total_exp_var),1))
            
         # scree plot
-        fig, axs = plt.subplots(2, sharex=True)
+        fig, axs = plt.subplots(2, figsize=(12,8), sharex=True)
         fig.suptitle('Explained Variance (EV)')
         axs[0].plot(list(range(1,ncomps+1)),explained_variance,'b*')
         axs[0].set_ylabel('EV per component');
-        axs[1].plot(list(range(1,ncomps+1)),explained_variance_p)
-        axs[1].plot(list(range(1,ncomps+1)),[ExplainedVariance] * ncomps,'r--', label='PEV')
+        axs[1].plot(list(range(1,ncomps+1)),explained_variance_p, label="Cum. EV (%)")
+        axs[1].plot(list(range(1,ncomps+1)),[ExplainedVariance] * ncomps,'r--', label="Max. PEV")
         axs[1].set_xlabel('Number of components')
-        axs[1].set_ylabel('Cumulative EV (%)')
+        axs[1].set_ylabel('EV (%)')
+        axs[1].legend()
         axs[1].set_xticks(list(range(1,len(explained_variance)+1)))
         plt.savefig(evpng)
         plt.close(fig)

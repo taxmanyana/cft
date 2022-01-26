@@ -116,6 +116,18 @@ if __name__ == "__main__":
         if len(config.get('predictandList')) != 0:
             missing = config.get('predictandMissingValue')
             if len(str(missing)) == 0: missing = -9999
+            for filename in config.get('predictandList'):
+                with open(filename) as f:
+                    fline = f.readline().rstrip()
+                if fline.count(',') < 4:
+                    print("Format error in "+os.path.basename(filename)+", check if comma delimited")
+                    exit(1)
+                if csvheader not in fline:
+                    print("Format error, one or more column headers incorrect in " + os.path.basename(filename))
+                    exit(1)
+                if 'ID' not in fline:
+                    print("Format error, station name column header should be labelled as ID in " + os.path.basename(filename))
+                    exit(1)
             input_data = concat_csvs(config.get('predictandList'), missing)
             predictanddict['data'] = input_data
             stations = list(input_data['ID'].unique())

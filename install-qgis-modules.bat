@@ -7,11 +7,11 @@ set mypath=%mypath:~0,-1%
 
 set OSGEO4W_ROOT=""
 rem Detect QGIS Version
-FOR /F "tokens=* USEBACKQ" %%g in (`dir /b "C:\Program Files (x86)\QGIS 3*" 2^>NUL`) do (
-  set OSGEO4W_ROOT="C:\Program Files (x86)\%%g"
+FOR /F "tokens=* USEBACKQ" %%g in (`dir /b "%PROGRAMFILES(X86)%\QGIS 3*" 2^>NUL`) do (
+  set OSGEO4W_ROOT="%PROGRAMFILES(X86)%\%%g"
 )
-FOR /F "tokens=* USEBACKQ" %%g in (`dir /b "C:\Program Files\QGIS 3*" 2^>NUL`) do (
-  set OSGEO4W_ROOT="C:\Program Files\%%g"
+FOR /F "tokens=* USEBACKQ" %%g in (`dir /b "%PROGRAMFILES%\QGIS 3*" 2^>NUL`) do (
+  set OSGEO4W_ROOT="%PROGRAMFILES%\%%g"
 )
 
 if %OSGEO4W_ROOT% == "" (

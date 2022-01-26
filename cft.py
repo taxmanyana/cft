@@ -151,6 +151,10 @@ if __name__ == "__main__":
                     window.statusbar.showMessage(
                         "Format error, one or more column headers incorrect in " + os.path.basename(filename))
                     continue
+                if 'ID' not in fline:
+                    window.statusbar.showMessage(
+                        "Format error, station name column header should be labelled as ID in " + os.path.basename(filename))
+                    continue
                 config['predictandList'].append(filename)
                 window.predictandlistWidget.addItem(os.path.basename(filename))
         elif window.NetCDFRadio.isChecked() == True:

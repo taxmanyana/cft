@@ -2,6 +2,7 @@
 echo.
 echo CFT Installation Script
 echo.
+chcp 437
 SET mypath=%~dp0
 set mypath=%mypath:~0,-1%
 

@@ -1091,9 +1091,11 @@ def forecast_pixel_unit(config, predictordict, predictand_data, fcstPeriod, algo
             r2score = m ** 2
             q1, q2, q3, pmedian, famnt, fclass, HS, Prob, cgtable_df, skill_df = \
                 run_model_skill(mlp_fcstdf, fcstPeriod, 'MLPfcst', r2score, training_actual)
-            a_series = pd.Series([predictorName, algorithm, point, q1, q2, q3, pmedian, famnt,
-                                  fclass, r2score, HS, Prob], index=forecastdf.columns)
-            forecastdf = forecastdf.append(a_series, ignore_index=True)
+            
+            a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                     'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                     'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+            forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
             mlp_fcstdf.rename(columns={'MLPfcst': predictorName +'_MLP'}, inplace=True)
 
     if algorithm == 'LR':
@@ -1117,9 +1119,10 @@ def forecast_pixel_unit(config, predictordict, predictand_data, fcstPeriod, algo
         coeff_arr.insert(0, regrFormula["intercept"])
         q1, q2, q3, pmedian, famnt, fclass, HS, Prob, cgtable_df, skill_df = \
             run_model_skill(lr_fcstdf, fcstPeriod, 'LRfcst', r2score, training_actual)
-        a_series = pd.Series([predictorName, algorithm, point, q1, q2, q3, pmedian, famnt,
-                              fclass, r2score, HS, Prob], index=forecastdf.columns)
-        forecastdf = forecastdf.append(a_series, ignore_index=True)
+        a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                 'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                 'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+        forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
         lr_fcstdf.rename(columns={'LRfcst': predictorName + '_LR'}, inplace=True)
 
     # return station forecast
@@ -1405,9 +1408,10 @@ def forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, 
             if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: cgtable_df.to_csv(csv, index=False)
             csv = mlpdirout + os.sep + prefix + '_score-statistics.csv'
             if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: skill_df.to_csv(csv, index=False)
-            a_series = pd.Series([predictorName, algorithm, station, lat, lon, q1, q2, q3, pmedian, famnt,
-                                  fclass, r2score, HS, Prob], index=forecastdf.columns)
-            forecastdf = forecastdf.append(a_series, ignore_index=True)
+            a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                     'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                     'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+            forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
             if int(config.get('plots', {}).get('trainingraphs', 0)) == 1:
                 mlp_fcstdf = pd.concat([mlp_traindf, mlp_fcstdf], ignore_index=False)
             mlp_fcstdf.rename(columns={'MLPfcst': predictorName +'_MLP'}, inplace=True)
@@ -1462,9 +1466,10 @@ def forecast_unit(config, predictordict, predictanddict, fcstPeriod, algorithm, 
         if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: cgtable_df.to_csv(csv, index=False)
         csv = lrdirout + os.sep + prefix + '_score-statistics.csv'
         if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: skill_df.to_csv(csv, index=False)
-        a_series = pd.Series([predictorName, algorithm, station, lat, lon, q1, q2, q3, pmedian, famnt,
-                              fclass, r2score, HS, Prob], index=forecastdf.columns)
-        forecastdf = forecastdf.append(a_series, ignore_index=True)
+        a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                 'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                 'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+        forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
         if int(config.get('plots', {}).get('trainingraphs', 0)) == 1:
             lr_fcstdf = pd.concat([lr_traindf, lr_fcstdf], ignore_index=False)
         lr_fcstdf.rename(columns={'LRfcst': predictorName + '_LR'}, inplace=True)
@@ -1771,9 +1776,10 @@ def forecast_station(config, predictordict, predictanddict, fcstPeriod, outdir, 
                     if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: cgtable_df.to_csv(csv, index=False)
                     csv = mlpdirout + os.sep + prefix + '_score-statistics.csv'
                     if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: skill_df.to_csv(csv, index=False)
-                    a_series = pd.Series([predictorName, algorithm, station, lat, lon, q1, q2, q3, pmedian, famnt,
-                                          fclass, r2score, HS, Prob], index=forecastdf.columns)
-                    forecastdf = forecastdf.append(a_series, ignore_index=True)
+                    a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                             'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                             'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+                    forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
                     if int(config.get('plots', {}).get('trainingraphs', 0)) == 1:
                         mlp_fcstdf = pd.concat([mlp_traindf, mlp_fcstdf], ignore_index=False)
                     mlp_fcstdf.rename(columns={'MLPfcst': predictorName +'_MLP'}, inplace=True)
@@ -1828,9 +1834,10 @@ def forecast_station(config, predictordict, predictanddict, fcstPeriod, outdir, 
                 if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: cgtable_df.to_csv(csv, index=False)
                 csv = lrdirout + os.sep + prefix + '_score-statistics.csv'
                 if int(config.get('plots', {}).get('regrcsvs', 1)) == 1: skill_df.to_csv(csv, index=False)
-                a_series = pd.Series([predictorName, algorithm, station, lat, lon, q1, q2, q3, pmedian, famnt,
-                                      fclass, r2score, HS, Prob], index=forecastdf.columns)
-                forecastdf = forecastdf.append(a_series, ignore_index=True)
+                a_series = pd.DataFrame({'Predictor': predictorName, 'Algorithm': algorithm, 'ID': station, 
+                                         'Lat': lat, 'Lon': lon, 't1': q1, 't2': q2, 't3': q3, 'median': pmedian, 
+                                         'fcst': famnt, 'class': fclass, 'r2score': r2score, 'HS': HS, 'Prob': Prob}, index=[0])
+                forecastdf = pd.concat([forecastdf, a_series], axis=0, ignore_index=True)
                 if int(config.get('plots', {}).get('trainingraphs', 0)) == 1:
                     lr_fcstdf = pd.concat([lr_traindf, lr_fcstdf], ignore_index=False)
                     

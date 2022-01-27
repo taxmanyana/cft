@@ -77,7 +77,7 @@ def fixname(text):
 def concat_csvs(csvs, missing):
     dfs_files = []
     for file in csvs:
-        dfs_files.append(pd.read_csv(file, encoding = 'ISO-8859-9'))
+        dfs_files.append(pd.read_csv(file, encoding = 'ISO-8859-9', decimal='.'))
     dfs_files = pd.concat((dfs_files), axis=0)
     dfs_files = dfs_files.replace(str(missing), np.nan)
     dfs_files = dfs_files.dropna(how='all')
@@ -646,7 +646,7 @@ if __name__ == "__main__":
         # polygonize the raster
         print('polygonizing the zone raster into a geojson')
         window.statusbar.showMessage('polygonizing the zone raster into a geojson')
-        retval = os.system('python ' + gdal_polygonize + ' -b 1 -f GeoJSON "' + zonenc + '" "' + dst_zones + '" izones Zone')
+        retval = os.system('python "' + gdal_polygonize + '" -b 1 -f GeoJSON "' + zonenc + '" "' + dst_zones + '" izones Zone')
         if retval != 0:
             print('failed to polygonize the zone raster into a geojson')
             window.statusbar.showMessage('failed to polygonize the zone raster into a geojson')

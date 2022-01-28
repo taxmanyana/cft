@@ -165,6 +165,13 @@ def create_nc(outfile, zonegrid, lats, lons):
     zones.units = 'Zone ID'
     output.close()
 
+def sizeof_fmt(num, suffix="B"):
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
 #
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
@@ -471,7 +478,7 @@ if __name__ == "__main__":
         axs[0].plot(list(range(1,ncomps+1)),explained_variance,'b*')
         axs[0].set_ylabel('EV per component');
         axs[1].plot(list(range(1,ncomps+1)),explained_variance_p, label="Cum. EV (%)")
-        axs[1].plot(list(range(1,ncomps+1)),[ExplainedVariance] * ncomps,'r--', label="Max. PEV")
+        axs[1].plot(list(range(1,ncomps+1)),[ExplainedVariance] * ncomps,'r--', label="Min. PEV")
         axs[1].set_xlabel('Number of components')
         axs[1].set_ylabel('EV (%)')
         axs[1].legend()
@@ -533,233 +540,246 @@ if __name__ == "__main__":
         ys = np.arange(miny,maxy+gridsize,gridsize)
         nx = len(xs)
         ny = len(ys)
-        
-        xi,yi = np.meshgrid(xs,ys)
-        xi, yi = xi.flatten(), yi.flatten()
-        comps = []
-        
-        c = 3
-        r = int(len(colnames)/3)
-        if (len(colnames)%3 != 0) or (r == 0): r+=1
-        
-        
-        fig, axs = plt.subplots(r, c, figsize=(30, 6*r), facecolor='w', edgecolor='k')
-        fig.tight_layout()
-        axs = axs.ravel()
-         
-        for i in range(len(colnames)):
-            col = colnames[i]
-            z = np.ravel(df2[col].values)
-            # interpolate
-            if interpolation == 'idw':
-                zi = simple_idw(x,y,z,xi,yi)
+        print("grid bounds (xmin, ymin, xmax, ymax): " + str((minx, miny, maxx, maxy)))
+        print("number of grid points: " + str(nx * ny))
+        print("minimum memory required: " + sizeof_fmt(nx * ny * 64 * 6))
+        if (nx * ny * 64 * 6) > 1073741824:
+            status = "images too big (>1 GiB memory required). consider increasing the gridsize value"
+            print(status)
+            window.statusbar.showMessage(status)
+            
+        else:
+            window.statusbar.showMessage("creating grids, minimum memory required: " + sizeof_fmt(nx * ny * 64) + " x 3")  
+            xi,yi = np.meshgrid(xs,ys)
+            xi, yi = xi.flatten(), yi.flatten()
+            comps = []
+            
+            c = 3
+            r = int(len(colnames)/3)
+            if (len(colnames)%3 != 0) or (r == 0): r+=1
+            
+            
+            # generating and plotting interpolated components maps
+            print('generate and plot the interpolated components maps')
+            window.statusbar.showMessage('generate and plot the interpolated components maps')
+            fig, axs = plt.subplots(r, c, figsize=(30, 6*r), facecolor='w', edgecolor='k')
+            fig.tight_layout()
+            axs = axs.ravel()
+             
+            for i in range(len(colnames)):
+                col = colnames[i]
+                z = np.ravel(df2[col].values)
+                # interpolate
+                if interpolation == 'idw':
+                    zi = simple_idw(x,y,z,xi,yi)
+                else:
+                    zi = linear_rbf(x,y,z,xi,yi)
+                zi = zi.reshape((ny, nx))
+                comps.append(list(zi))
+                # plot
+                axs[i].imshow(zi, extent=(minx, maxx, maxy, miny))
+                for feature in base_map['features']:
+                    poly = feature['geometry']
+                    axs[i].add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
+                axs[i].plot(x,y,'k.')
+                axs[i].title.set_text(col)
+                axs[i].title.set_fontsize(10)
+                axs[i].invert_yaxis()
+                axs[i].set_xlim([minx, maxx])
+                axs[i].set_ylim([miny, maxy])
+            plt.savefig(farpng,dpi=100)
+            plt.close(fig)
+            
+            comps = np.array(comps)    
+            #comps[np.isnan(comps)] = 0
+            comps = comps.reshape(len(colnames),len(xs)*len(ys))
+            
+            if nzones is None:
+                # compute optimal number of zones
+                print('compute optimal number of zones')
+                window.statusbar.showMessage('computing optimal number of zones')
+                wcss = []
+                distances = []
+                maxk = 16
+                klist = list(range(1, maxk+1))
+                for d in klist:
+                    kmeans = cluster.KMeans(n_clusters = d, random_state=42).fit(comps.T)
+                    wcss.append(kmeans.inertia_)
+                
+                # create linear coefficients for line joining first and last kmeans inertia
+                a = (float(wcss[-1] - wcss[0]))/(klist[-1] - klist[0])
+                b = -1
+                c = wcss[0] - (klist[0] * a)
+                
+                # calculate perpendicular distances from each kmeans to line
+                for e in klist:
+                    distances.append((e, shortest_distance(e, wcss[e-1], a, b, c)))
+                
+                # locate albow and get optimal number of zones
+                distances.sort(key=lambda g: g[1])
+                n_clusters = distances[-1][0]
             else:
-                zi = linear_rbf(x,y,z,xi,yi)
-            zi = zi.reshape((ny, nx))
-            comps.append(list(zi))
+                n_clusters = nzones
+            
+            print('clustering of components')
+            window.statusbar.showMessage('clustering components')
+            db = cluster.KMeans(n_clusters = n_clusters, random_state=42).fit(comps.T)
+            dblabels = np.array(db.labels_) + 1
+            zi = dblabels.reshape(len(ys), len(xs))
+            print("number of zones ", len(np.unique(dblabels)))
+            window.statusbar.showMessage("number of zones " + str(len(np.unique(dblabels))))
             # plot
-            axs[i].imshow(zi, extent=(minx, maxx, maxy, miny))
+            DPI = 150
+            W = 750
+            H = int(W * ny / nx)
+            fig = plt.figure(figsize=(W / float(DPI), H / float(DPI)), frameon=True, dpi=DPI)
+            ax = fig.gca()
+            ax.imshow(zi, extent=(minx, maxx, maxy, miny))
             for feature in base_map['features']:
                 poly = feature['geometry']
-                axs[i].add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
-            axs[i].plot(x,y,'k.')
-            axs[i].title.set_text(col)
-            axs[i].title.set_fontsize(10)
-            axs[i].invert_yaxis()
-            axs[i].set_xlim([minx, maxx])
-            axs[i].set_ylim([miny, maxy])
-        plt.savefig(farpng,dpi=100)
-        plt.close(fig)
-        
-        comps = np.array(comps)    
-        #comps[np.isnan(comps)] = 0
-        comps = comps.reshape(len(colnames),len(xs)*len(ys))
-        
-        if nzones is None:
-            # compute optimal number of zones
-            print('compute optimal number of zones')
-            window.statusbar.showMessage('computing optimal number of zones')
-            wcss = []
-            distances = []
-            maxk = 16
-            klist = list(range(1, maxk+1))
-            for d in klist:
-                kmeans = cluster.KMeans(n_clusters = d, random_state=42).fit(comps.T)
-                wcss.append(kmeans.inertia_)
-            
-            # create linear coefficients for line joining first and last kmeans inertia
-            a = (float(wcss[-1] - wcss[0]))/(klist[-1] - klist[0])
-            b = -1
-            c = wcss[0] - (klist[0] * a)
-            
-            # calculate perpendicular distances from each kmeans to line
-            for e in klist:
-                distances.append((e, shortest_distance(e, wcss[e-1], a, b, c)))
-            
-            # locate albow and get optimal number of zones
-            distances.sort(key=lambda g: g[1])
-            n_clusters = distances[-1][0]
-        else:
-            n_clusters = nzones
-        
-        print('clustering of components')
-        window.statusbar.showMessage('clustering components')
-        db = cluster.KMeans(n_clusters = n_clusters, random_state=42).fit(comps.T)
-        zi = db.labels_.reshape(len(ys), len(xs))
-        print("number of zones ", len(np.unique(db.labels_)))
-        window.statusbar.showMessage("number of zones " + str(len(np.unique(db.labels_))))
-        # plot
-        DPI = 150
-        W = 750
-        H = int(W * ny / nx)
-        fig = plt.figure(figsize=(W / float(DPI), H / float(DPI)), frameon=True, dpi=DPI)
-        ax = fig.gca()
-        ax.imshow(zi, extent=(minx, maxx, maxy, miny))
-        for feature in base_map['features']:
-            poly = feature['geometry']
-            ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
-        ax.plot(x,y,'k.')
-        ax.title.set_text(period_text + ' Zones')
-        ax.title.set_fontsize(10)
-        ax.invert_yaxis()
-        ax.set_xlim([minx, maxx])
-        ax.set_ylim([miny, maxy])
-        plt.savefig(izonespng,dpi=DPI)
-        plt.close(fig)
-        
-        # elbow plot
-        if nzones is None:      
-            print("elbow plot")
-            if os.path.exists(zonepath / 'elbowplot.png'):
-                os.remove(zonepath / 'elbowplot.png')
-            plt.figure()
-            plt.plot(klist, wcss, 'bx-')
-            plt.plot(n_clusters, wcss[klist.index(n_clusters)], 'r.')
-            plt.xlabel('Values of K')
-            plt.xticks(klist)
-            plt.ylabel('Distortion')
-            plt.title('The Elbow Method using Distortion')
-            plt.savefig(zonepath / 'elbowplot.png',dpi=100)
+                ax.add_patch(PolygonPatch(poly, fc=None, fill=False, ec='#8f8f8f', alpha=1., zorder=2))
+            ax.plot(x,y,'k.')
+            ax.title.set_text(period_text + ' Zones')
+            ax.title.set_fontsize(10)
+            ax.invert_yaxis()
+            ax.set_xlim([minx, maxx])
+            ax.set_ylim([miny, maxy])
+            plt.savefig(izonespng,dpi=DPI)
             plt.close(fig)
-        
-        # create a raster for the zones
-        print('creating zone NetCDF')
-        window.statusbar.showMessage('creating zone NetCDF')
-        create_nc(zonenc, zi, ys, xs)
-
-        # polygonize the raster
-        print('polygonizing the zone raster into a geojson')
-        window.statusbar.showMessage('polygonizing the zone raster into a geojson')
-        retval = os.system('python "' + gdal_polygonize + '" -b 1 -f GeoJSON "' + zonenc + '" "' + dst_zones + '" izones Zone')
-        if retval != 0:
-            print('failed to polygonize the zone raster into a geojson')
-            window.statusbar.showMessage('failed to polygonize the zone raster into a geojson')
-            return
-        
-        # clean the vector zone map
-        print('cleaning the vector zone map')
-        window.statusbar.showMessage('cleaning the vector zone map')
-        with open(dst_zones, "r") as read_file:
-            base_map = geojson.load(read_file)
-        
-        extents = []
-        for feature in base_map['features']:
-            extents.append(shape(feature['geometry']).bounds)
-        smallerpolygons = []
-        for i in range(len(extents)):
-            for j in range(len(extents)):
-                if i == j: continue
-                zonei = base_map['features'][i]['properties']['Zone']
-                zonej = base_map['features'][j]['properties']['Zone']
-                if (zonei == zonej) and (bigger(extents[i], extents[j])):
-                    smallerpolygons.append(j)
-        
-        containedpolygons = []
-        for i in range(len(extents)):
-            for j in range(len(extents)):
-                if i == j: continue
-                coordsi = base_map['features'][i]['geometry']['coordinates'][0]
-                coordsj = base_map['features'][j]['geometry']['coordinates'][0]
-                polyi = Polygon([(x,y) for x,y in coordsi])
-                polyj = Polygon([(x,y) for x,y in coordsj])
-                if polyi.contains(polyj):
-                    containedpolygons.append(j)
-                    
-        containedpolygons = np.unique(containedpolygons)
-        smallerpolygons = np.unique(smallerpolygons)
-        smallerpolygons = list(set(smallerpolygons).intersection(containedpolygons))
-        print('will clean out tiny polygons ', smallerpolygons)
-        window.statusbar.showMessage('removing tiny polygons ' + str(smallerpolygons))
-        
-        zones = []
-        coords = []
-        # remove tiny polygons, reorder the zones and close holes
-        for n in range(len(base_map['features'])):
-            if n not in smallerpolygons:
-                feature = base_map['features'][n]
-                coords.append([feature['geometry']['coordinates'][0]])
-                zones.append(feature['properties']['Zone'])
-        
-        uniquezones = np.unique(zones)
-        featurecoords = [[] for x in range(len(uniquezones))]
-        
-        for n in range(len(uniquezones)):
-            for m in range(len(zones)):
-                if zones[m] == uniquezones[n]:
-                    featurecoords[n].append(coords[m])
-        
-        features = []
-        for n in range(len(uniquezones)):
-            features.append(
-                { 
-                    "type": "Feature", 
-                    "properties": 
-                        { 
-                            "Zone": int(uniquezones[n])
-                                }, 
-                            "geometry": 
-                                { 
-                                    "type": "MultiPolygon", 
-                                    "coordinates": featurecoords[n]
-                                    }
-                                })
-        
-        new_map = geojson.feature.FeatureCollection(features)
-        new_map["name"] = "Zones"
-
-        with open(zonejson_clean, 'w') as fp:
-            geojson.dump(new_map, fp, sort_keys=False, ensure_ascii=False)
-        
-        # perform smoothing if activated
-        if config.get('smoothing', 0):
-            # smooth the output vector
-            print('smoothing the output vector')
-            smooth_size = gridsize * 2.0
-            smooth(zonejson_clean,zonejson_smooth,dst_layername,smooth_size)
-            # open base map for clipping
-            print('opening smoothed map for clipping')
-            zonejson_clean = zonejson_smooth
-        
-        # clip intermediate zone layer with base map
-        print('clip intermediate zone layer with base map')
-        retval = os.system('ogr2ogr -f GeoJSON -clipsrc "' + base_vector + '" "' + zonejson + '" "' + zonejson_clean + '"')
-        if retval != 0:
-            print('failed to clip intermediate zone layer with base map')
-            window.statusbar.showMessage('failed to clip intermediate zone layer with base map')
-            return
-        
-        # close data sources
-        print('close the data sources')
-        
-        inDataSource = None
-        inClipSource = None
-        outDataSource = None
-        
-        
-        print("End time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        print('Done in ' + str(convert(time.time() - start_time)))
-        window.statusbar.showMessage('Done in ' + str(convert(time.time() - start_time)))
-        
+            
+            # elbow plot
+            if nzones is None:      
+                print("elbow plot")
+                if os.path.exists(zonepath / 'elbowplot.png'):
+                    os.remove(zonepath / 'elbowplot.png')
+                plt.figure()
+                plt.plot(klist, wcss, 'bx-')
+                plt.plot(n_clusters, wcss[klist.index(n_clusters)], 'r.')
+                plt.xlabel('Values of K')
+                plt.xticks(klist)
+                plt.ylabel('Distortion')
+                plt.title('The Elbow Method using Distortion')
+                plt.savefig(zonepath / 'elbowplot.png',dpi=100)
+                plt.close(fig)
+            
+            # create a raster for the zones
+            print('creating zone NetCDF')
+            window.statusbar.showMessage('creating zone NetCDF')
+            create_nc(zonenc, zi, ys, xs)
+    
+            # polygonize the raster
+            print('polygonizing the zone raster into a geojson')
+            window.statusbar.showMessage('polygonizing the zone raster into a geojson')
+            retval = os.system('python "' + gdal_polygonize + '" -b 1 -f GeoJSON "' + zonenc + '" "' + dst_zones + '" izones Zone')
+            if retval != 0:
+                print('failed to polygonize the zone raster into a geojson')
+                window.statusbar.showMessage('failed to polygonize the zone raster into a geojson')
+                return
+            
+            # clean the vector zone map
+            print('cleaning the vector zone map')
+            window.statusbar.showMessage('cleaning the vector zone map')
+            with open(dst_zones, "r") as read_file:
+                base_map = geojson.load(read_file)
+            
+            extents = []
+            for feature in base_map['features']:
+                extents.append(shape(feature['geometry']).bounds)
+            smallerpolygons = []
+            for i in range(len(extents)):
+                for j in range(len(extents)):
+                    if i == j: continue
+                    zonei = base_map['features'][i]['properties']['Zone']
+                    zonej = base_map['features'][j]['properties']['Zone']
+                    if (zonei == zonej) and (bigger(extents[i], extents[j])):
+                        smallerpolygons.append(j)
+            
+            containedpolygons = []
+            for i in range(len(extents)):
+                for j in range(len(extents)):
+                    if i == j: continue
+                    coordsi = base_map['features'][i]['geometry']['coordinates'][0]
+                    coordsj = base_map['features'][j]['geometry']['coordinates'][0]
+                    polyi = Polygon([(x,y) for x,y in coordsi])
+                    polyj = Polygon([(x,y) for x,y in coordsj])
+                    if polyi.contains(polyj):
+                        containedpolygons.append(j)
+                        
+            containedpolygons = np.unique(containedpolygons)
+            smallerpolygons = np.unique(smallerpolygons)
+            smallerpolygons = list(set(smallerpolygons).intersection(containedpolygons))
+            print('will clean out tiny polygons ', smallerpolygons)
+            window.statusbar.showMessage('removing tiny polygons ' + str(smallerpolygons))
+            
+            zones = []
+            coords = []
+            # remove tiny polygons, reorder the zones and close holes
+            for n in range(len(base_map['features'])):
+                if n not in smallerpolygons:
+                    feature = base_map['features'][n]
+                    coords.append([feature['geometry']['coordinates'][0]])
+                    zones.append(feature['properties']['Zone'])
+            
+            uniquezones = np.unique(zones)
+            featurecoords = [[] for x in range(len(uniquezones))]
+            
+            for n in range(len(uniquezones)):
+                for m in range(len(zones)):
+                    if zones[m] == uniquezones[n]:
+                        featurecoords[n].append(coords[m])
+            
+            features = []
+            for n in range(len(uniquezones)):
+                features.append(
+                    { 
+                        "type": "Feature", 
+                        "properties": 
+                            { 
+                                "Zone": int(uniquezones[n])
+                                    }, 
+                                "geometry": 
+                                    { 
+                                        "type": "MultiPolygon", 
+                                        "coordinates": featurecoords[n]
+                                        }
+                                    })
+            
+            new_map = geojson.feature.FeatureCollection(features)
+            new_map["name"] = "Zones"
+    
+            with open(zonejson_clean, 'w') as fp:
+                geojson.dump(new_map, fp, sort_keys=False, ensure_ascii=False)
+            
+            # perform smoothing if activated
+            if config.get('smoothing', 0):
+                # smooth the output vector
+                print('smoothing the output vector')
+                smooth_size = gridsize * 2.0
+                smooth(zonejson_clean,zonejson_smooth,dst_layername,smooth_size)
+                # open base map for clipping
+                print('opening smoothed map for clipping')
+                zonejson_clean = zonejson_smooth
+            
+            # clip intermediate zone layer with base map
+            print('clip intermediate zone layer with base map')
+            retval = os.system('ogr2ogr -f GeoJSON -clipsrc "' + base_vector + '" "' + zonejson + '" "' + zonejson_clean + '"')
+            if retval != 0:
+                print('failed to clip intermediate zone layer with base map')
+                window.statusbar.showMessage('failed to clip intermediate zone layer with base map')
+                return
+            
+            # close data sources
+            print('close the data sources')
+            
+            inDataSource = None
+            inClipSource = None
+            outDataSource = None
+            
+            
+            print("End time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            print('Done in ' + str(convert(time.time() - start_time)))
+            window.statusbar.showMessage('Done in ' + str(convert(time.time() - start_time)))
+            
     # --- Load values into the UI ---
     window.outdirlabel.setText(config.get('outdir'))
     window.inputlayerlabel.setText(os.path.basename(config.get('base_vector',{}).get('file')))

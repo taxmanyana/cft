@@ -37,6 +37,42 @@ if [ -d source ]; then
   fi
   echo
   cd $cwd/source
+  wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.23.0/cmake-3.23.0.tar.gz -c
+  if [[ $? -ne 0 ]]; then
+     echo "error, could not download cmake. check URL in the script and update if necessary"
+     exit
+  fi
+  lib=$(find ./ -maxdepth 1 -name "cmake-*" -type f | tail -1)
+  if [ -n $lib ]; then
+    echo
+    echo "installing ${lib##*/}..."
+    tar xf $lib
+    cd $(find ./ -maxdepth 1 -name "cmake-*" -type d)
+    ./bootstrap --prefix=${PYTHONPATH}
+    make
+    make install
+  fi
+  echo
+  cd $cwd/source
+  wget --no-check-certificate http://download.osgeo.org/geos/geos-3.10.2.tar.bz2 -c
+  if [[ $? -ne 0 ]]; then
+     echo "error, could not download geos. check URL in the script and update if necessary"
+     exit
+  fi
+  lib=$(find ./ -maxdepth 1 -name "geos-*" -type f | tail -1)
+  if [ -n $lib ]; then
+    echo
+    echo "installing ${lib##*/}..."
+    tar xf $lib
+    cd $(find ./ -maxdepth 1 -name "geos-*" -type d)
+    mkdir _build
+    cd _build
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${PYTHONPATH} ..
+    make
+    make install
+  fi
+  echo
+  cd $cwd/source
   wget --no-check-certificate https://www.openssl.org/source/openssl-3.0.0-alpha13.tar.gz -c
   if [[ $? -ne 0 ]]; then
      echo "error, could not download openssl. check URL in the script and update if necessary"

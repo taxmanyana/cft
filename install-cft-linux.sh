@@ -106,7 +106,7 @@ if [ -d source ]; then
   fi
   echo
   cd $cwd/source
-  wget --no-check-certificate https://zlib.net/zlib-1.2.11.tar.gz -c
+  wget --no-check-certificate https://zlib.net/zlib-1.2.12.tar.gz -c
   if [[ $? -ne 0 ]]; then
      echo "error, could not download zlib. check URL in the script and update if necessary"
      exit

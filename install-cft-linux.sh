@@ -37,6 +37,27 @@ if [ -d source ]; then
   fi
   echo
   cd $cwd/source
+  wget --no-check-certificate https://www.openssl.org/source/openssl-3.0.0-alpha13.tar.gz -c
+  if [[ $? -ne 0 ]]; then
+     echo "error, could not download openssl. check URL in the script and update if necessary"
+     exit
+  fi
+  lib=$(find ./ -maxdepth 1 -name "openssl-*" -type f | tail -1)
+  if [ -n $lib ]; then
+    echo
+    echo "installing ${lib##*/}..."
+    tar xf $lib
+    cd $(find ./ -maxdepth 1 -name "openssl-*" -type d)
+    ./config --prefix=${PYTHONPATH} --openssldir=${PYTHONPATH}
+    make -j4
+    make install -j4
+    if [[ $? -ne 0 ]]; then
+       echo "error, openssl could not be installed"
+       exit
+    fi
+  fi
+  echo
+  cd $cwd/source
   wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.23.0/cmake-3.23.0.tar.gz -c
   if [[ $? -ne 0 ]]; then
      echo "error, could not download cmake. check URL in the script and update if necessary"
@@ -70,27 +91,6 @@ if [ -d source ]; then
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${PYTHONPATH} ..
     make
     make install
-  fi
-  echo
-  cd $cwd/source
-  wget --no-check-certificate https://www.openssl.org/source/openssl-3.0.0-alpha13.tar.gz -c
-  if [[ $? -ne 0 ]]; then
-     echo "error, could not download openssl. check URL in the script and update if necessary"
-     exit
-  fi
-  lib=$(find ./ -maxdepth 1 -name "openssl-*" -type f | tail -1)
-  if [ -n $lib ]; then
-    echo
-    echo "installing ${lib##*/}..."
-    tar xf $lib
-    cd $(find ./ -maxdepth 1 -name "openssl-*" -type d)
-    ./config --prefix=${PYTHONPATH} --openssldir=${PYTHONPATH}
-    make -j4
-    make install -j4
-    if [[ $? -ne 0 ]]; then
-       echo "error, openssl could not be installed"
-       exit
-    fi
   fi
   echo
   cd $cwd/source

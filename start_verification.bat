@@ -60,5 +60,5 @@ echo PATH: %PATH%
 echo.
 echo PYTHONPATH: %PYTHONPATH%
 echo.
-START /B python verification.py
+python verification.py
 pause

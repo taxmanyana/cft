@@ -46,6 +46,8 @@ if not "%QTAP%" == "" set PYAPP=%OSGEO4W_ROOT%\apps\%PYAP%
 rem write the environment variables to qgis_env.bat
 if exist "%QGISAPP%" echo set QGISAPP=%QGISAPP%>> "%mypath%\qgis_env.bat"
 if exist "%QGISAPP%" echo set QGISAP=%QGISAP%>> "%mypath%\qgis_env.bat"
+if exist "%OSGEO4W_ROOT%" echo set HDF5_DIR=%OSGEO4W_ROOT%>> "%mypath%\qgis_env.bat"
+if exist "%OSGEO4W_ROOT%" echo set NETCDF4_DIR=%OSGEO4W_ROOT%>> "%mypath%\qgis_env.bat"
 if exist "%QTAPP%" echo set QTAPP=%QTAPP%>> "%mypath%\qgis_env.bat"
 if exist "%PYAPP%" echo set PYAPP=%PYAPP%>> "%mypath%\qgis_env.bat"
 
@@ -129,7 +131,7 @@ if %errorlevel% equ 0 (
 )
 echo.
 echo upgrading netCDF4...
-python -m pip install --upgrade netCDF4
+python -m pip install netCDF4==1.5.7
 if %errorlevel% equ 0 (
  echo netCDF4 upgraded successfully
 )

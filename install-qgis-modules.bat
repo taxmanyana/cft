@@ -178,4 +178,13 @@ if %errorlevel% equ 0 (
  echo descartes upgraded successfully
 )
 echo.
+
+rem create desktop launcher
+set TARGET='%mypath%\startup.bat'
+set SHORTCUT='%mypath%\CFT.lnk'
+set ICON='%mypath%\icon\cft.ico'
+set PWS=powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -NoProfile
+
+START /B %PWS% -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(%SHORTCUT%); $S.TargetPath = %TARGET%; $S.IconLocation = %ICON%; $S.Save()"
+
 pause

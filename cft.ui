@@ -34,7 +34,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>cft.ico</normaloff>cft.ico</iconset>
+    <normaloff>icon/cft.ico</normaloff>icon/cft.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="minimumSize">
@@ -857,7 +857,7 @@
      <x>0</x>
      <y>0</y>
      <width>547</width>
-     <height>25</height>
+     <height>43</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuAbout">
@@ -894,7 +894,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

@@ -183,8 +183,9 @@ rem create desktop launcher
 set TARGET='%mypath%\startup.bat'
 set SHORTCUT='%mypath%\CFT.lnk'
 set ICON='%mypath%\icon\cft.ico'
+set WD='%mypath%'
 set PWS=powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -NoProfile
 
-START /B %PWS% -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(%SHORTCUT%); $S.TargetPath = %TARGET%; $S.IconLocation = %ICON%; $S.Save()"
+START /B %PWS% -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(%SHORTCUT%); $S.TargetPath = %TARGET%; $S.IconLocation = %ICON%; $S.WorkingDirectory = %WD%; $S.Save()"
 
 pause

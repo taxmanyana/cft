@@ -219,10 +219,12 @@ if __name__ == "__main__":
         verstatscsvout = Path(config.get('outDir')) / (fcstshp.stem + '_verstats.csv')
         outputnc = Path(config.get('outDir')) / (fcstshp.stem + '_verification.nc')
         
-        
         gdal_rasterize = None
         for d in os.environ['PATH'].split(os.pathsep) + sys.path:
             if (Path(d) / 'gdal_rasterize').exists():
+                gdal_rasterize = str((Path(d) / 'gdal_rasterize'))
+                break
+            if (Path(d) / 'gdal_rasterize.exe').exists():
                 gdal_rasterize = str((Path(d) / 'gdal_rasterize'))
                 break
         if gdal_rasterize == None:

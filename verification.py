@@ -268,7 +268,10 @@ if __name__ == "__main__":
             mon1 = predictand_data.tslice()[monthindex(times, mon1.strftime('%Y%m'))]
             mon2 = predictand_data.tslice()[monthindex(times, mon2)]
             mon3 = predictand_data.tslice()[monthindex(times, mon3)]
-            currentseasonmap = np.sum([mon1, mon2, mon3], axis=0)
+            if config.get('composition', 'Sum') == "Sum":
+                currentseasonmap = np.sum([mon1, mon2, mon3], axis=0)
+            else:
+                currentseasonmap = np.mean([mon1, mon2, mon3], axis=0)
             # compute season totals for training period
             for yr in trainingYears:
                 mon1 = datetime.strptime(str(yr)+monn, '%Y%m')
@@ -277,7 +280,10 @@ if __name__ == "__main__":
                 mon1 = predictand_data.tslice()[monthindex(times, mon1.strftime('%Y%m'))]
                 mon2 = predictand_data.tslice()[monthindex(times, mon2)]
                 mon3 = predictand_data.tslice()[monthindex(times, mon3)]
-                trainingseasonmaps.append(np.sum([mon1, mon2, mon3], axis=0))
+                if config.get('composition', 'Sum') == "Sum":
+                    trainingseasonmaps.append(np.sum([mon1, mon2, mon3], axis=0))
+                else:
+                    trainingseasonmaps.append(np.mean([mon1, mon2, mon3], axis=0))
                 window.statusbar.showMessage('aggregation for ' + str(yr) + '...')
         except Exception as e:
             print('Error: ' + str(e))

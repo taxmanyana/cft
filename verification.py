@@ -40,41 +40,7 @@ def monthindex(arr, mon):
     for x in range(len(arr)):
         if str(arr[x][:6])==mon:
             return x
-    raise ValueError('month '+str(mon)+' not available')
-    
-    
-def fcstnc(ncin, ncout):
-    output = Dataset(ncout, 'w', format='NETCDF4')
-    title = 'blank'
-    output.description = title
-    output.comments = 'Created ' + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
-    output.source = config.get('Version')
-    output.history = title
-    rows, cols = ncin.shape()
-    lat = output.createDimension('lat', rows)
-    lon = output.createDimension('lon', cols)
-    T = output.createDimension('T', 1)
-    initial_date = output.createVariable('T', np.float64, ('T',))
-    latitudes = output.createVariable('lat', np.float32, ('lat',))
-    longitudes = output.createVariable('lon', np.float32, ('lon',))
-    blankvals = output.createVariable('fcst', np.uint8, ('T', 'lat', 'lon'))
-    latitudes.units = 'degree_north'
-    latitudes.axis = 'Y'
-    latitudes.long_name = 'Latitude'
-    latitudes.standard_name = 'Latitude'
-    longitudes.units = 'degree_east'
-    longitudes.axis = 'X'
-    longitudes.long_name = 'Longitude'
-    longitudes.standard_name = 'Longitude'
-    initial_date.units = 'days since 1970-01-01'
-    initial_date.axis = 'T'
-    initial_date.calendar = 'standard'
-    initial_date.standard_name = 'time'
-    initial_date.long_name = 'date'
-    latitudes[:] = ncin.lats
-    longitudes[:] = ncin.lons
-    blankvals[:] = np.zeros((ncin.shape()))
-    output.close()    
+    raise ValueError('month '+str(mon)+' not available') 
 
 
 if __name__ == "__main__":
@@ -115,6 +81,7 @@ if __name__ == "__main__":
         global config
         window.forecastvectorlabel.setText('')
         config['fcstvector'] = {"file": '', "ID": 0, "attr": []}
+        window.forecastvectorparamcombobox.clear()
         vectorfieldsx = []
         # window.zoneIDcomboBox.setDuplicatesEnabled(False)
         fileName = QtWidgets.QFileDialog.getOpenFileName(window,
@@ -141,6 +108,7 @@ if __name__ == "__main__":
         global config
         window.predictandlabel.setText('')
         config['predictand'] = {"file": '', "ID": 0, "attr": []}
+        window.climatparamcombobox.clear()
         if window.CSVRadio.isChecked() == True:
             config['inputFormat'] = "CSV"
             fileNames = QtWidgets.QFileDialog.getOpenFileNames(window,
@@ -225,7 +193,7 @@ if __name__ == "__main__":
                 gdal_rasterize = str((Path(d) / 'gdal_rasterize'))
                 break
             if (Path(d) / 'gdal_rasterize.exe').exists():
-                gdal_rasterize = str((Path(d) / 'gdal_rasterize'))
+                gdal_rasterize = str((Path(d) / 'gdal_rasterize.exe'))
                 break
         if gdal_rasterize == None:
             print('gdal_rasterize binary not found, required!')
@@ -241,18 +209,27 @@ if __name__ == "__main__":
         trainingseasonmaps = []
         #
         predictand_data = netcdf_data(config.get('predictand').get('file'), param=param)
+        rows, cols = predictand_data.shape()
+        xmin = np.min(predictand_data.lons)
+        ymin = np.min(predictand_data.lats)
+        xmax = np.max(predictand_data.lons)
+        ymax = np.max(predictand_data.lats)
         if os.path.exists(fcst_raster):  os.remove(fcst_raster)
-        fcstnc(predictand_data, fcst_raster)
+        
+        # fcstnc(predictand_data, fcst_raster)
         
         # rasterize the forecast vector
         print('rasterizing the forecast vector')
         window.statusbar.showMessage('rasterizing the forecast vector')
-        retval = os.system('"' + gdal_rasterize  + '" -b 1 -a ' + fcst_attrib + ' "' + str(fcstshp) + '" "' + str(fcst_raster) + '"')
+        retval = os.system(gdal_rasterize  + ' -a_srs EPSG:4326 -ts ' + str(cols) + ' ' + str(rows) + 
+                           ' -te ' + str(xmin) + ' ' + str(ymin) + ' ' + str(xmax) + ' ' + str(ymax) + 
+                           ' -a ' + fcst_attrib + ' "' + str(fcstshp) + '" "' + str(fcst_raster) + '"')
         if retval != 0:
             print('failed to rasterize the forecast vector into raster')
+            return
         
-        ffcst_data = netcdf_data(fcst_raster, param='fcst')
-        ffcst = ffcst_data.tslice()[0]
+        ffcst_dst = Dataset(fcst_raster)
+        ffcst = ffcst_dst['Band1'][:]
         times = predictand_data.times()
         monn = datetime.strptime(predictorMonth, '%b').strftime('%m')
         season = season_start_month.get(predictorMonth)
@@ -300,7 +277,7 @@ if __name__ == "__main__":
         llimit = ltmean - ltstdmod
         ulimit = ltmean + ltstdmod
         testout = np.zeros((ltmean.shape))
-        verout = np.ones((ltmean.shape)) * 100.
+        verout = np.ones((ltmean.shape)) * 255.
         ltmeannz = ltmean[:]
         ltmeannz[ltmeannz==0] = .0001 
         panom = 100. * currentseasonmap / ltmeannz
@@ -341,7 +318,6 @@ if __name__ == "__main__":
         output.comments = 'Created ' + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
         output.source = config.get('Version')
         output.history = title
-        rows, cols = predictand_data.shape()
         lat = output.createDimension('lat', rows)
         lon = output.createDimension('lon', cols)
         T = output.createDimension('T', 1)

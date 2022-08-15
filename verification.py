@@ -182,6 +182,16 @@ if __name__ == "__main__":
         window.statusbar.showMessage("Start time: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         
         fcstshp =  Path(config.get('fcstvector').get('file'))
+        if not fcstshp.exists():    
+            print("Forecast vector map does not exist")
+            window.statusbar.showMessage("Forecast vector map does not exist")
+            return
+        
+        if not Path(config.get('predictand').get('file')).exists():    
+            print("Climatological data file does not exist")
+            window.statusbar.showMessage("Climatological data file does not exist")
+            return
+        
         fcst_attrib = config.get('fcstvector').get('attr')[config.get('fcstvector').get('ID')]
         fcst_raster = Path(config.get('outDir')) / (fcstshp.stem + '.nc')
         verstatscsvout = Path(config.get('outDir')) / (fcstshp.stem + '_verstats.csv')
@@ -272,11 +282,14 @@ if __name__ == "__main__":
         ltmean = np.mean(trainingseasonmaps, axis=0)
         ltmedian = np.median(trainingseasonmaps, axis=0)
         ltstd = np.std(trainingseasonmaps, axis=0)
-        ltperc5 = np.percentile(trainingseasonmaps, 5, axis=0)
+        ltperc33 = np.percentile(trainingseasonmaps, 33, axis=0)
+        ltperc50 = np.percentile(trainingseasonmaps, 50, axis=0)
+        ltperc66 = np.percentile(trainingseasonmaps, 66, axis=0)
         ltstdmod = ltstd * 1.25
         llimit = ltmean - ltstdmod
         ulimit = ltmean + ltstdmod
         testout = np.zeros((ltmean.shape))
+        tercver = np.ones((ltmean.shape)) * 255.
         verout = np.ones((ltmean.shape)) * 255.
         ltmeannz = ltmean[:]
         ltmeannz[ltmeannz==0] = .0001 
@@ -298,6 +311,10 @@ if __name__ == "__main__":
         verout[(abs(testout - ffcst) == 2)] = 33.
         verout[(abs(testout - ffcst) == 3)] = 0.
         verout[(ffcst == 0)] = 255
+        tercver[currentseasonmap < ltperc33] = 1.
+        tercver[currentseasonmap >= ltperc33] = 2.
+        tercver[currentseasonmap >= ltperc50] = 3.
+        tercver[currentseasonmap >= ltperc66] = 4.
         verstats = pd.DataFrame(data=[np.count_nonzero(verout == 0),
                            np.count_nonzero(verout == 33),
                            np.count_nonzero(verout == 66),
@@ -329,9 +346,13 @@ if __name__ == "__main__":
         bltsdmod = output.createVariable('stdmod', np.float64, ('T', 'lat', 'lon'))
         bllimit = output.createVariable('llimit', np.float64, ('T', 'lat', 'lon'))
         bulimit = output.createVariable('ulimit', np.float64, ('T', 'lat', 'lon'))
+        bterc33 = output.createVariable('terc33', np.float64, ('T', 'lat', 'lon'))
+        bterc50 = output.createVariable('terc50', np.float64, ('T', 'lat', 'lon'))
+        bterc66 = output.createVariable('terc66', np.float64, ('T', 'lat', 'lon'))
         bffcst = output.createVariable('fcst', np.uint8, ('T', 'lat', 'lon'))
         bactual = output.createVariable('actual', np.float64, ('T', 'lat', 'lon'))
         banomp = output.createVariable('anom', np.float64, ('T', 'lat', 'lon'))
+        bterc = output.createVariable('terc', np.uint8, ('T', 'lat', 'lon'))
         bverif = output.createVariable('ver', np.uint8, ('T', 'lat', 'lon'))
         latitudes.units = 'degree_north'
         latitudes.axis = 'Y'
@@ -353,12 +374,16 @@ if __name__ == "__main__":
         bltsdmod[:] = ltstdmod
         bllimit[:] = llimit
         bulimit[:] = ulimit
+        bterc33[:] = ltperc33
+        bterc50[:] = ltperc50
+        bterc66[:] = ltperc66
         bffcst[:] = ffcst
         bactual[:] = currentseasonmap
         banomp[:] = panom
+        bterc[:] = tercver
         bverif[:] = verout
-        output.close()  
-        
+        output.close()     
+        if os.path.exists(fcst_raster):  os.remove(fcst_raster)
         print(verstats)
         print("End time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         print('Done in ' + str(convert(time.time() - start_time)))

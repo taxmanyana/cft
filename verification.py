@@ -327,6 +327,7 @@ if __name__ == "__main__":
         verstats.to_csv(verstatscsvout, header=True, index=True)
         
         np.count_nonzero(verout != 255)
+        ffcst_dst.close()
         
         # compute verification matrices
         print('generate verification output file')

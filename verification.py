@@ -294,6 +294,9 @@ if __name__ == "__main__":
         ltmeannz = ltmean[:]
         ltmeannz[ltmeannz==0] = .0001 
         panom = 100. * currentseasonmap / ltmeannz
+        ltmediannz = ltmedian[:]
+        ltmediannz[ltmediannz==0] = .0001 
+        percmedian = 100. * currentseasonmap / ltmediannz
         
         # compute verification matrices
         print('computing verification matrices')
@@ -352,6 +355,7 @@ if __name__ == "__main__":
         bffcst = output.createVariable('fcst', np.uint8, ('T', 'lat', 'lon'))
         bactual = output.createVariable('actual', np.float64, ('T', 'lat', 'lon'))
         banomp = output.createVariable('anom', np.float64, ('T', 'lat', 'lon'))
+        bpercmedian = output.createVariable('percmedian', np.float64, ('T', 'lat', 'lon'))
         bterc = output.createVariable('terc', np.uint8, ('T', 'lat', 'lon'))
         bverif = output.createVariable('ver', np.uint8, ('T', 'lat', 'lon'))
         latitudes.units = 'degree_north'
@@ -380,6 +384,7 @@ if __name__ == "__main__":
         bffcst[:] = ffcst
         bactual[:] = currentseasonmap
         banomp[:] = panom
+        bpercmedian[:] = percmedian
         bterc[:] = tercver
         bverif[:] = verout
         output.close()     

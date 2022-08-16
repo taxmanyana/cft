@@ -13,8 +13,9 @@ if [ $? -ne 0 ]; then
   zenity --error --text="Cannot load required python environment, ensure installation script has been executed"
   exit
 fi
-if [ ! -f cft.py ]; then
-   zenity --error --text="Cannot locate CFT executable, ensure installation script has been executed"
+
+if [ ! -f $1 ]; then
+   zenity --error --text="Cannot locate $1, ensure installation script has been executed"
    exit
 fi
-python3 cft.py 
+python3 $1 

@@ -228,12 +228,12 @@ echo "[Desktop Entry]" >> $cwd/CFT.desktop
 echo "Version=1.0" >> $cwd/CFT.desktop
 echo "Type=Application" >> $cwd/CFT.desktop
 echo "Terminal=false" >> $cwd/CFT.desktop
-echo "Exec=${cwd}/cft_ubuntu.sh" >> $cwd/CFT.desktop
+echo "Exec=${cwd}/start_linux.sh" >> $cwd/CFT.desktop
 echo "Name=CFT" >> $cwd/CFT.desktop
 echo "Comment=CFT" >> $cwd/CFT.desktop
-echo "Icon=${cwd}/cft.ico" >> $cwd/CFT.desktop
+echo "Icon=${cwd}/icon/cft.ico" >> $cwd/CFT.desktop
 chmod 777 $cwd/CFT.desktop
-chmod +x ${cwd}/cft_ubuntu.sh
+chmod +x ${cwd}/start_linux.sh
 [ -d ~/Desktop ]  && cp $cwd/CFT.desktop ~/Desktop/
 echo "installation completed."
 

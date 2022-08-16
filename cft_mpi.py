@@ -16,7 +16,7 @@ size = comm.Get_size()
 rank = comm.Get_rank()
 
 # Global Variables
-version = '3.0.3'
+version = '3.1.1'
 months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 seasons = ['JFM','FMA','MAM','AMJ','MJJ','JJA','JAS','ASO','SON','OND','NDJ','DJF']
 csvheader = 'Year,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'

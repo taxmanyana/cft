@@ -52,7 +52,7 @@ if __name__ == "__main__":
         with open(settingsfile, "r") as read_file:
             config = json.load(read_file)
     except:
-        version = '3.1.0'
+        version = '3.1.1'
         config = {}
         config['Version'] = version
         config['outDir'] = ''

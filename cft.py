@@ -18,7 +18,7 @@ pwd = os.path.dirname(os.path.realpath('__file__'))
 qtCreatorFile = "cft.ui"
 
 # Global Variables
-version = '3.0.3'
+version = '3.1.1'
 months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 seasons = ['JFM','FMA','MAM','AMJ','MJJ','JJA','JAS','ASO','SON','OND','NDJ','DJF']
 month_start_season = {'JFM': 'Jan', 'FMA': 'Feb', 'MAM': 'Mar', 'AMJ': 'Apr', 'MJJ': 'May', 'JJA': 'Jun', 'JAS': 'Jul',

@@ -279,12 +279,12 @@ if __name__ == "__main__":
             window.statusbar.showMessage('Error: ' + str(e))
             return
         
-        ltmean = np.mean(trainingseasonmaps, axis=0)
-        ltmedian = np.median(trainingseasonmaps, axis=0)
-        ltstd = np.std(trainingseasonmaps, axis=0)
-        ltperc33 = np.percentile(trainingseasonmaps, 33, axis=0)
-        ltperc50 = np.percentile(trainingseasonmaps, 50, axis=0)
-        ltperc66 = np.percentile(trainingseasonmaps, 66, axis=0)
+        ltmean = np.nanmean(trainingseasonmaps, axis=0)
+        ltmedian = np.nanmedian(trainingseasonmaps, axis=0)
+        ltstd = np.nanstd(trainingseasonmaps, axis=0)
+        ltperc33 = np.nanpercentile(trainingseasonmaps, 33, axis=0)
+        ltperc50 = np.nanpercentile(trainingseasonmaps, 50, axis=0)
+        ltperc66 = np.nanpercentile(trainingseasonmaps, 66, axis=0)
         ltstdmod = ltstd * 1.25
         llimit = ltmean - ltstdmod
         ulimit = ltmean + ltstdmod
@@ -302,8 +302,8 @@ if __name__ == "__main__":
         print('computing verification matrices')
         window.statusbar.showMessage('computing verification matrices')
         test1 = (currentseasonmap < llimit)
-        test2 = ((currentseasonmap >= llimit) & (currentseasonmap < ltmean))
-        test3 = ((currentseasonmap >= ltmean) & (currentseasonmap < ulimit))
+        test2 = ((currentseasonmap >= llimit) & (currentseasonmap < ltmedian))
+        test3 = ((currentseasonmap >= ltmedian) & (currentseasonmap < ulimit))
         test4 = (currentseasonmap >= ulimit)
         testout[test1] = 1.
         testout[test2] = 2.

@@ -328,6 +328,12 @@ if __name__ == "__main__":
                 missing = config.get('predictandMissingValue')
                 if len(str(missing)) == 0: missing = -9999
                 input_data = concat_csvs(config.get('predictandList'), missing)
+                predictandstaryr = int(np.min(input_data['Year']))
+                if predictandstaryr > int(config.get('trainStartYear')):
+                    status = "Predictand data starts in " + str(predictandstaryr) + ", does not cover training period"
+                    print(status)
+                    window.statusbar.showMessage(status)
+                    return
                 predictanddict['data'] = input_data
                 stations = list(input_data['ID'].unique())
                 predictanddict['stations'] = stations
@@ -345,6 +351,13 @@ if __name__ == "__main__":
         elif config.get('inputFormat') == 'NetCDF':
             if len(config.get('predictandList')) != 0:
                 predictand_data = netcdf_data(config.get('predictandList')[0], param=config.get('predictandattr'))
+                yrs = [int(x) for x in predictand_data.times()]
+                predictandstaryr = int(str(np.min(yrs))[:4])
+                if predictandstaryr > int(config.get('trainStartYear')):
+                    status = "Predictand data starts in " + str(predictandstaryr) + ", does not cover training period"
+                    print(status)
+                    window.statusbar.showMessage(status)
+                    return
                 prs = list(range(len(config.get('predictorList'))))
                 als = list(range(len(config.get('algorithms'))))
                 rows, cols = predictand_data.shape()

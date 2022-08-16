@@ -180,6 +180,7 @@ if %errorlevel% equ 0 (
 echo.
 
 rem create desktop launcher
+set mypath=%mypath:'=''%
 set TARGET='%mypath%\startup.bat'
 set SHORTCUT='%mypath%\CFT.lnk'
 set ICON='%mypath%\icon\cft.ico'

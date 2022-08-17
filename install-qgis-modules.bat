@@ -178,6 +178,12 @@ if %errorlevel% equ 0 (
  echo descartes upgraded successfully
 )
 echo.
+echo upgrading threadpoolctl...
+python -m pip install --upgrade threadpoolctl>=3.0.0
+if %errorlevel% equ 0 (
+ echo threadpoolctl upgraded successfully
+)
+echo.
 
 rem create desktop launcher
 set mypath=%mypath:'=''%
